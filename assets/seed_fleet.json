@@ -1,0 +1,98 @@
+[
+  {
+    "vin": "VIN0001",
+    "reg": "KA 01 AB 1234",
+    "model": "eCargo 55",
+    "socPercent": 78,
+    "rangeKm": 172,
+    "speedKmh": 42,
+    "ignitionOn": true,
+    "batteryTempC": 31,
+    "odometerKm": 45210,
+    "lastPingSecondsAgo": 3
+  },
+  {
+    "vin": "VIN0002",
+    "reg": "KA 05 CD 5678",
+    "model": "eCargo 55",
+    "socPercent": 64,
+    "rangeKm": 141,
+    "speedKmh": 0,
+    "ignitionOn": true,
+    "batteryTempC": 29,
+    "odometerKm": 82977,
+    "lastPingSecondsAgo": 8
+  },
+  {
+    "vin": "VIN0003",
+    "reg": "MH 12 EF 9012",
+    "model": "eVan 30",
+    "socPercent": 17,
+    "rangeKm": 34,
+    "speedKmh": 38,
+    "ignitionOn": true,
+    "batteryTempC": 33,
+    "odometerKm": 12780,
+    "lastPingSecondsAgo": 5
+  },
+  {
+    "vin": "VIN0004",
+    "reg": "KA 53 GH 3456",
+    "model": "eVan 30",
+    "socPercent": 91,
+    "rangeKm": 205,
+    "speedKmh": 0,
+    "ignitionOn": false,
+    "batteryTempC": 27,
+    "odometerKm": 30455,
+    "lastPingSecondsAgo": 40
+  },
+  {
+    "vin": "VIN0005",
+    "reg": "TN 09 IJ 7890",
+    "model": "eCargo 55",
+    "socPercent": 52,
+    "rangeKm": 110,
+    "speedKmh": 12,
+    "ignitionOn": true,
+    "batteryTempC": 47,
+    "odometerKm": 67002,
+    "lastPingSecondsAgo": 6
+  },
+  {
+    "vin": "VIN0006",
+    "reg": "KA 02 KL 2468",
+    "model": "eVan 30",
+    "socPercent": 44,
+    "rangeKm": null,
+    "speedKmh": 0,
+    "ignitionOn": false,
+    "batteryTempC": null,
+    "odometerKm": 55890,
+    "lastPingSecondsAgo": 95
+  },
+  {
+    "vin": "VIN0007",
+    "reg": "AP 16 MN 1357",
+    "model": "eCargo 55",
+    "socPercent": 8,
+    "rangeKm": 15,
+    "speedKmh": 0,
+    "ignitionOn": true,
+    "batteryTempC": 36,
+    "odometerKm": 91004,
+    "lastPingSecondsAgo": 720
+  },
+  {
+    "vin": "VIN0008",
+    "reg": "KA 41 PQ 8642",
+    "model": "eVan 30",
+    "socPercent": null,
+    "rangeKm": null,
+    "speedKmh": 0,
+    "ignitionOn": false,
+    "batteryTempC": 25,
+    "odometerKm": 23100,
+    "lastPingSecondsAgo": 55
+  }
+]
