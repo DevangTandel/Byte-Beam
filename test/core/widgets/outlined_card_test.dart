@@ -47,7 +47,9 @@ void main() {
       expect(shape.side.width, stroke);
     });
 
-    testWidgets('defaults outline color to ColorScheme.outline', (tester) async {
+    testWidgets(
+      'defaults outline color to ColorScheme.outline',
+      (tester) async {
       await tester.pumpWidget(
         wrap(const OutlinedCard(child: Text('default'))),
       );

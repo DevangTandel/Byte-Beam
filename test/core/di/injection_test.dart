@@ -21,7 +21,9 @@ void main() {
     await sl.reset();
   });
 
-  test('configureDependencies registers clock, data, repo, and blocs', () async {
+  test(
+    'configureDependencies registers clock, data, repo, and blocs',
+    () async {
     const seed = [
       VehicleModel(
         vin: 'VIN1',

@@ -144,9 +144,9 @@ void main() {
         );
         expect(socPill.verdict, Verdict.normal);
         expect(socPill.value, 80);
-        expect(find.text('80 %'), findsOneWidget);
+        expect(find.text('80.00 %'), findsOneWidget);
         expect(
-          tester.widget<Text>(find.text('80 %')).style?.color,
+          tester.widget<Text>(find.text('80.00 %')).style?.color,
           styles.normalValueColor,
         );
 
@@ -155,7 +155,7 @@ void main() {
         );
         expect(rangePill.verdict, Verdict.normal);
         expect(rangePill.value, 172);
-        expect(find.text('172 km'), findsOneWidget);
+        expect(find.text('172.00 km'), findsOneWidget);
       },
     );
 
@@ -215,13 +215,13 @@ void main() {
         expect(socPill.verdict, isNot(Verdict.alert));
         expect(socPill.value, 8);
 
-        expect(find.text('8 %'), findsOneWidget);
+        expect(find.text('8.00 %'), findsOneWidget);
         expect(
-          tester.widget<Text>(find.text('8 %')).style?.color,
+          tester.widget<Text>(find.text('8.00 %')).style?.color,
           styles.staleValueColor,
         );
         expect(
-          tester.widget<Text>(find.text('8 %')).style?.color,
+          tester.widget<Text>(find.text('8.00 %')).style?.color,
           isNot(styles.alertValueColor),
         );
         expect(find.text('data 12 min old'), findsWidgets);
@@ -230,7 +230,7 @@ void main() {
           find.byKey(const Key('home-reading-range')),
         );
         expect(rangePill.verdict, Verdict.stale);
-        expect(find.text('15 km'), findsOneWidget);
+        expect(find.text('15.00 km'), findsOneWidget);
       },
     );
 
@@ -253,7 +253,7 @@ void main() {
 
         expect(socPill.verdict, Verdict.alert);
         expect(
-          tester.widget<Text>(find.text('15 %')).style?.color,
+          tester.widget<Text>(find.text('15.00 %')).style?.color,
           styles.alertValueColor,
         );
       },
@@ -282,7 +282,7 @@ void main() {
         );
         expect(socPill.verdict, Verdict.alert);
         expect(
-          tester.widget<Text>(find.text('80 %')).style?.color,
+          tester.widget<Text>(find.text('80.00 %')).style?.color,
           styles.alertValueColor,
         );
       },

@@ -23,10 +23,10 @@ void main() {
         ),
       );
 
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('3 Alerts'), findsOneWidget);
 
       final styles = AppTheme.light().extension<AlertBadgeTheme>()!;
-      final countStyle = tester.widget<Text>(find.text('3')).style;
+      final countStyle = tester.widget<Text>(find.text('3 Alerts')).style;
       expect(
         countStyle?.color,
         styles.foregroundFor(AlertSeverity.critical),
@@ -56,10 +56,10 @@ void main() {
         ),
       );
 
-      expect(find.text('1'), findsOneWidget);
+      expect(find.text('1 Alert'), findsOneWidget);
 
       final styles = AppTheme.light().extension<AlertBadgeTheme>()!;
-      final countStyle = tester.widget<Text>(find.text('1')).style;
+      final countStyle = tester.widget<Text>(find.text('1 Alert')).style;
       expect(
         countStyle?.color,
         styles.foregroundFor(AlertSeverity.warning),

@@ -82,6 +82,8 @@ class AlertsCubit extends Cubit<AlertsState> {
   final AlertPersistence _persistence;
   final Clock _clock;
 
+  // Cancelled in [close]; held for the cubit lifetime by design.
+  // ignore: cancel_subscriptions
   StreamSubscription<List<Vehicle>>? _subscription;
   Timer? _undoTimer;
   int _idSeq = 0;
@@ -136,7 +138,6 @@ class AlertsCubit extends Cubit<AlertsState> {
     emit(
       AlertsState(
         active: [...state.active, pending.alert],
-        undoable: null,
       ),
     );
   }

@@ -22,6 +22,8 @@ class FleetRepositoryImpl implements FleetRepository {
   final Clock _launchClock;
 
   final _fanout = StreamController<List<Vehicle>>.broadcast();
+  // Cancelled in [dispose]; held for the repository lifetime by design.
+  // ignore: cancel_subscriptions
   StreamSubscription<List<VehicleModel>>? _subscription;
   List<Vehicle>? _latest;
   var _started = false;

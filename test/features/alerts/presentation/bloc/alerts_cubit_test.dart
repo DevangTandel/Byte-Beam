@@ -27,7 +27,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const vin = 'VIN0003';
 
   late FakeClock clock;
@@ -150,8 +150,9 @@ void main() {
         cubit.dismiss(alertId, DismissReason.somethingElse);
 
         // Undo window expires — dismissal becomes permanent for this instance.
-        async.elapse(const Duration(seconds: 5));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(seconds: 5))
+          ..flushMicrotasks();
 
         expect(cubit.state.active, isEmpty);
         expect(cubit.state.undoable, isNull);
@@ -186,8 +187,9 @@ void main() {
 
         // 2) Dismiss and let undo window expire.
         cubit.dismiss(firstId, DismissReason.onIt);
-        async.elapse(const Duration(seconds: 5));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(seconds: 5))
+          ..flushMicrotasks();
         expect(cubit.state.active, isEmpty);
 
         // 3) Resolve (SOC recovers above threshold).
@@ -218,8 +220,9 @@ void main() {
 
         final alertId = cubit.state.active.single.id;
         cubit.dismiss(alertId, DismissReason.onIt);
-        async.elapse(const Duration(seconds: 5));
-        async.flushMicrotasks();
+        async
+          ..elapse(const Duration(seconds: 5))
+          ..flushMicrotasks();
 
         cubit.undo(); // no-op after window; still must not touch persistence
         vehiclesController.add([vehicle(soc: 15)]);
@@ -289,8 +292,9 @@ void main() {
           expect(cubit.state.active, isEmpty);
 
           // Only the second dismissal's 5s window should finalize.
-          async.elapse(const Duration(seconds: 5));
-          async.flushMicrotasks();
+          async
+            ..elapse(const Duration(seconds: 5))
+            ..flushMicrotasks();
           expect(cubit.state.undoable, isNull);
           expect(cubit.state.active, isEmpty);
 
@@ -363,12 +367,13 @@ void main() {
           // Navigate-away / dispose mid-window cancels the undo Timer.
           // ignore: unawaited_futures
           cubit.close();
-          async.flushMicrotasks();
+          async
+            ..flushMicrotasks()
+            ..elapse(const Duration(seconds: 5))
+            ..flushMicrotasks();
 
-          async.elapse(const Duration(seconds: 5));
-          async.flushMicrotasks();
-
-          // Timer did not fire: undoable was never cleared by _onUndoWindowElapsed.
+          // Timer did not fire: undoable was never cleared by
+          // _onUndoWindowElapsed.
           expect(cubit.state.undoable, isNotNull);
           expect(cubit.state.undoable!.alert.id, alertId);
         });
@@ -378,8 +383,7 @@ void main() {
     blocTest<AlertsCubit, AlertsState>(
       'emits active alert on SOC breach (bloc_test stream assertion)',
       build: () {
-        cubit = buildCubit();
-        return cubit;
+        return cubit = buildCubit();
       },
       act: (c) {
         vehiclesController.add([vehicle(soc: 8)]);

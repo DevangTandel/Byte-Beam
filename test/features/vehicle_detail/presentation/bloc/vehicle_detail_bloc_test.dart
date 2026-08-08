@@ -164,7 +164,8 @@ void main() {
               'has lowBattery alert',
               isTrue,
             ),
-        // Alerts clear on null SOC (alerts stream), then fleet updates verdicts.
+        // Alerts clear on null SOC (alerts stream), then fleet updates
+        // verdicts.
         isA<VehicleDetailLoaded>().having(
           (s) => s.alerts.where((a) => a.kind == AlertKind.lowBattery),
           'lowBattery cleared',

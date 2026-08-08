@@ -82,7 +82,8 @@ void main() {
         ),
       );
 
-      // Zero-count filters remain visible (empty-state is the list, not the chip).
+      // Zero-count filters remain visible (empty-state is the list,
+      // not the chip).
       expect(find.text('Idle (0)'), findsOneWidget);
       expect(find.text('All (7)'), findsOneWidget);
       expect(find.text('Offline (1)'), findsOneWidget);

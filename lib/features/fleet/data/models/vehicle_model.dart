@@ -6,10 +6,10 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'vehicle_model.freezed.dart';
 part 'vehicle_model.g.dart';
 
+/// JSON DTO for a seeded / streamed fleet vehicle.
 @freezed
 abstract class VehicleModel with _$VehicleModel {
-  const VehicleModel._();
-
+  /// Creates a [VehicleModel] from telemetry fields.
   const factory VehicleModel({
     required String vin,
     required String reg,
@@ -23,6 +23,9 @@ abstract class VehicleModel with _$VehicleModel {
     double? batteryTempC,
   }) = _VehicleModel;
 
+  const VehicleModel._();
+
+  /// Deserializes a [VehicleModel] from JSON.
   factory VehicleModel.fromJson(Map<String, dynamic> json) =>
       _$VehicleModelFromJson(json);
 
@@ -34,10 +37,10 @@ abstract class VehicleModel with _$VehicleModel {
     );
 
     Reading<double> reading(double? value) => Reading<double>(
-      clock: launchClock,
-      value: value,
-      lastPingAt: lastPingAt,
-    );
+          clock: launchClock,
+          value: value,
+          lastPingAt: lastPingAt,
+        );
 
     return Vehicle(
       vin: vin,

@@ -46,10 +46,16 @@ Future<void> configureDependencies({
   if (clock != null) {
     locator.registerLazySingleton<Clock>(() => clock);
   } else {
+    Clock readSystemClock() => locator<SystemClock>();
     locator
       ..registerLazySingleton<SystemClock>(SystemClock.new)
-      ..registerLazySingleton<Clock>(() => locator<SystemClock>());
+      ..registerLazySingleton<Clock>(readSystemClock);
   }
+
+  MockTelemetryDataSource readMockTelemetry() =>
+      locator<MockTelemetryDataSource>();
+  FleetRepositoryImpl readFleetRepositoryImpl() =>
+      locator<FleetRepositoryImpl>();
 
   locator
     ..registerLazySingleton<MockTelemetryDataSource>(
@@ -60,18 +66,14 @@ Future<void> configureDependencies({
             seed: fleetSeed,
           ),
     )
-    ..registerLazySingleton<TelemetryDataSource>(
-      () => locator<MockTelemetryDataSource>(),
-    )
+    ..registerLazySingleton<TelemetryDataSource>(readMockTelemetry)
     ..registerLazySingleton<FleetRepositoryImpl>(
       () => FleetRepositoryImpl(
         dataSource: locator(),
         launchClock: locator(),
       ),
     )
-    ..registerLazySingleton<FleetRepository>(
-      () => locator<FleetRepositoryImpl>(),
-    )
+    ..registerLazySingleton<FleetRepository>(readFleetRepositoryImpl)
     ..registerLazySingleton<AlertPersistence>(NoopAlertPersistence.new)
     ..registerLazySingleton<AlertsCubit>(
       () => AlertsCubit(

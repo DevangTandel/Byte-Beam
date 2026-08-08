@@ -16,7 +16,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const bounds = ThresholdBounds(min: 20, max: 80);
 
   group('evaluateStaleness', () {
@@ -41,8 +41,64 @@ void main() {
       expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
     });
 
-    group('non-null, fresh, outside thresholds -> alert', () {
-      test('below min', () {
+    group('freshness boundary (stale means age > 5:00, not ≥)', () {
+      test('age 4:59 -> normal (not stale)', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 50,
+          lastPingAt: now.subtract(const Duration(minutes: 4, seconds: 59)),
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
+      });
+
+      test('age exactly 5:00 -> normal (not stale)', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 50,
+          lastPingAt: now.subtract(const Duration(minutes: 5)),
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
+      });
+
+      test('age 5:01 -> stale', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 50,
+          lastPingAt: now.subtract(const Duration(minutes: 5, seconds: 1)),
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.stale);
+      });
+
+      test('null lastPingAt treats age as zero -> normal when in bounds', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 50,
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
+      });
+    });
+
+    group('threshold boundary (inclusive min/max)', () {
+      test('value exactly at min (20) -> normal', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 20,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
+      });
+
+      test('value 19.9 (just below min) -> alert', () {
         final clock = FakeClock(now);
         final reading = Reading<double>(
           clock: clock,
@@ -53,7 +109,18 @@ void main() {
         expect(evaluateStaleness(reading, bounds, clock), Verdict.alert);
       });
 
-      test('above max', () {
+      test('value exactly at max (80) -> normal', () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 80,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+        );
+
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.normal);
+      });
+
+      test('value 80.1 (just above max) -> alert', () {
         final clock = FakeClock(now);
         final reading = Reading<double>(
           clock: clock,
@@ -65,16 +132,19 @@ void main() {
       });
     });
 
-    test('non-null, stale (age > 5min) -> stale, even if value breaches thresholds',
-        () {
-      final clock = FakeClock(now);
-      final reading = Reading<double>(
-        clock: clock,
-        value: 999,
-        lastPingAt: now.subtract(const Duration(minutes: 5, seconds: 1)),
-      );
+    test(
+      'non-null, stale (age > 5min) -> stale, even if value breaches '
+      'thresholds',
+      () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 999,
+          lastPingAt: now.subtract(const Duration(minutes: 5, seconds: 1)),
+        );
 
-      expect(evaluateStaleness(reading, bounds, clock), Verdict.stale);
-    });
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.stale);
+      },
+    );
   });
 }

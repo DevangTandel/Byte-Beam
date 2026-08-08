@@ -7,6 +7,7 @@ import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.da
 import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
 import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
+import 'package:flutter/foundation.dart';
 
 /// Chip / list filter for the fleet screen.
 enum FleetFilter {
@@ -27,6 +28,7 @@ enum FleetFilter {
 }
 
 /// Live status tallies over the full (unfiltered) fleet.
+@immutable
 class FleetStatusCounts {
   /// Creates [FleetStatusCounts].
   const FleetStatusCounts({
@@ -152,11 +154,9 @@ class FleetLoaded extends FleetState {
 class FleetBloc extends Bloc<FleetEvent, FleetState> {
   /// Creates a [FleetBloc].
   FleetBloc({
-    required FleetRepository repository,
-    required Clock clock,
-  }) : _repository = repository,
-       _clock = clock,
-       super(const FleetInitial()) {
+    required this._repository,
+    required this._clock,
+  }) : super(const FleetInitial()) {
     on<FleetStarted>(_onStarted);
     on<_FleetUpdated>(_onFleetUpdated);
     on<FilterChanged>(_onFilterChanged);

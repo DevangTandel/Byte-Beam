@@ -17,7 +17,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
 
   group('resolveStatus', () {
     group('precedence (first match wins)', () {
@@ -132,6 +132,32 @@ void main() {
         );
 
         expect(resolveStatus(vehicle, clock), isNot(VehicleStatus.offline));
+        expect(resolveStatus(vehicle, clock), VehicleStatus.stopped);
+      });
+    });
+
+    group('speed boundary', () {
+      test('speed exactly 0 with ignition on -> idle (not moving)', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          speed: 0,
+          ignitionOn: true,
+        );
+
+        expect(resolveStatus(vehicle, clock), VehicleStatus.idle);
+      });
+
+      test('null speed falls through to stopped (safe default)', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          speed: null,
+          ignitionOn: true,
+        );
+
         expect(resolveStatus(vehicle, clock), VehicleStatus.stopped);
       });
     });

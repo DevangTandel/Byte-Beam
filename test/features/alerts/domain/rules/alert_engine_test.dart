@@ -18,7 +18,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const vin = 'VIN-ALERT-1';
 
   group('evaluateAlerts', () {
@@ -65,7 +65,9 @@ void main() {
       );
     });
 
-    test('3. battery temp > 45C (fresh) -> one batteryOverheating critical', () {
+    test(
+      '3. battery temp > 45C (fresh) -> one batteryOverheating critical',
+      () {
       final clock = FakeClock(now);
       final vehicle = _vehicle(
         clock: clock,
@@ -276,6 +278,115 @@ void main() {
       );
       expect(alerts[0].id, isNot(alerts[1].id));
     });
+
+    group('threshold boundaries', () {
+      test('SOC exactly 20% -> no lowBattery alert', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 20,
+          socAge: const Duration(minutes: 1),
+          batteryTemp: 30,
+        );
+
+        expect(evaluateAlerts(vehicle, const [], clock), isEmpty);
+      });
+
+      test('SOC 19.9% -> lowBattery warning', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 19.9,
+          socAge: const Duration(minutes: 1),
+          batteryTemp: 30,
+        );
+
+        final alerts = evaluateAlerts(vehicle, const [], clock);
+        expect(alerts, hasLength(1));
+        expect(alerts.single.kind, AlertKind.lowBattery);
+        expect(alerts.single.severity, AlertSeverity.warning);
+      });
+
+      test('SOC exactly 10% -> lowBattery warning (critical is < 10)', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 10,
+          socAge: const Duration(minutes: 1),
+          batteryTemp: 30,
+        );
+
+        final alerts = evaluateAlerts(vehicle, const [], clock);
+        expect(alerts, hasLength(1));
+        expect(alerts.single.severity, AlertSeverity.warning);
+      });
+
+      test('SOC 9.9% -> lowBattery critical', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 9.9,
+          socAge: const Duration(minutes: 1),
+          batteryTemp: 30,
+        );
+
+        final alerts = evaluateAlerts(vehicle, const [], clock);
+        expect(alerts, hasLength(1));
+        expect(alerts.single.severity, AlertSeverity.critical);
+      });
+
+      test('battery temp exactly 45C -> no overheating alert', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 80,
+          batteryTemp: 45,
+          batteryTempAge: const Duration(minutes: 1),
+        );
+
+        expect(evaluateAlerts(vehicle, const [], clock), isEmpty);
+      });
+
+      test('battery temp 45.1C -> overheating critical', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 80,
+          batteryTemp: 45.1,
+          batteryTempAge: const Duration(minutes: 1),
+        );
+
+        final alerts = evaluateAlerts(vehicle, const [], clock);
+        expect(alerts, hasLength(1));
+        expect(alerts.single.kind, AlertKind.batteryOverheating);
+        expect(alerts.single.severity, AlertSeverity.critical);
+      });
+
+      test('null SOC and null batteryTemp -> no alerts', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: null,
+          batteryTemp: null,
+        );
+
+        expect(evaluateAlerts(vehicle, const [], clock), isEmpty);
+      });
+    });
   });
 }
 
@@ -283,12 +394,12 @@ Vehicle _vehicle({
   required Clock clock,
   required String vin,
   required DateTime now,
-  required double soc,
-  required double batteryTemp,
+  required double? soc,
+  required double? batteryTemp,
   Duration socAge = Duration.zero,
   Duration batteryTempAge = Duration.zero,
 }) {
-  Reading<double> reading(double value, Duration age) => Reading<double>(
+  Reading<double> reading(double? value, Duration age) => Reading<double>(
         clock: clock,
         value: value,
         lastPingAt: now.subtract(age),

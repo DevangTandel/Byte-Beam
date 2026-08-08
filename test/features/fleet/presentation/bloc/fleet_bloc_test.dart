@@ -101,10 +101,8 @@ List<Vehicle> seedFleet(Clock launchClock) {
       reg: 'KA 02 KL 2468',
       model: 'eVan 30',
       socPercent: 44,
-      rangeKm: null,
       speedKmh: 0,
       ignitionOn: false,
-      batteryTempC: null,
       odometerKm: 55890,
       lastPingSecondsAgo: 95,
     ),
@@ -124,8 +122,6 @@ List<Vehicle> seedFleet(Clock launchClock) {
       vin: 'VIN0008',
       reg: 'KA 41 PQ 8642',
       model: 'eVan 30',
-      socPercent: null,
-      rangeKm: null,
       speedKmh: 0,
       ignitionOn: false,
       batteryTempC: 25,
@@ -214,7 +210,9 @@ void main() {
         expect(byStatus[VehicleStatus.offline], 1);
 
         // VIN0007 is offline + stale SOC (not alert-red for low SOC).
-        final vin7 = loaded.items.singleWhere((i) => i.vehicle.vin == 'VIN0007');
+        final vin7 = loaded.items.singleWhere(
+          (i) => i.vehicle.vin == 'VIN0007',
+        );
         expect(vin7.status, VehicleStatus.offline);
         expect(vin7.socVerdict, Verdict.stale);
       },
@@ -244,7 +242,8 @@ void main() {
               'all filtered items are moving',
               isTrue,
             )
-            // Live counts are always over the full fleet, not the filtered list.
+            // Live counts are always over the full fleet, not the
+            // filtered list.
             .having((s) => s.counts, 'counts', seedCounts)
             .having((s) => s.counts.moving, 'counts.moving', 3)
             .having((s) => s.counts.all, 'counts.all', 8)
