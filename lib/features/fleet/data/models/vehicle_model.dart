@@ -14,19 +14,19 @@ abstract class VehicleModel with _$VehicleModel {
     required String vin,
     required String reg,
     required String model,
-    double? socPercent,
-    double? rangeKm,
     required double speedKmh,
-    bool? ignitionOn,
-    double? batteryTempC,
     required double odometerKm,
     required int lastPingSecondsAgo,
+    double? socPercent,
+    double? rangeKm,
+    bool? ignitionOn,
+    double? batteryTempC,
   }) = _VehicleModel;
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) =>
       _$VehicleModelFromJson(json);
 
-  /// Maps this DTO to a domain [Vehicle], resolving [lastPingAt] from
+  /// Maps this DTO to a domain [Vehicle], resolving lastPingAt from
   /// [lastPingSecondsAgo] against the fixed app-launch [launchClock].
   Vehicle toDomain(Clock launchClock) {
     final lastPingAt = launchClock.now().subtract(
@@ -34,10 +34,10 @@ abstract class VehicleModel with _$VehicleModel {
     );
 
     Reading<double> reading(double? value) => Reading<double>(
-          clock: launchClock,
-          value: value,
-          lastPingAt: lastPingAt,
-        );
+      clock: launchClock,
+      value: value,
+      lastPingAt: lastPingAt,
+    );
 
     return Vehicle(
       vin: vin,

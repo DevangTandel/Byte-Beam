@@ -57,11 +57,11 @@ void main() {
       );
     });
 
-    test('VIN0006 batteryTempC and VIN0008 soc/range null JSON fields '
+    test('VIN0006 range/batteryTemp and VIN0008 soc/range null JSON fields '
         'deserialize as null (not 0, not throw)', () {
       final vin0006 = vehicles.singleWhere((v) => v.vin == 'VIN0006');
       expect(vin0006.batteryTempC, isNull);
-      expect(vin0006.rangeKm, 234.08);
+      expect(vin0006.rangeKm, isNull);
 
       final vin0008 = vehicles.singleWhere((v) => v.vin == 'VIN0008');
       expect(vin0008.socPercent, isNull);

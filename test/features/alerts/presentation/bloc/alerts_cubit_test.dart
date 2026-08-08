@@ -72,7 +72,9 @@ void main() {
   });
 
   tearDown(() async {
-    await cubit.close();
+    if (!cubit.isClosed) {
+      await cubit.close();
+    }
     await vehiclesController.close();
   });
 
@@ -227,6 +229,151 @@ void main() {
         verifyZeroInteractions(mockPersistence);
       });
     });
+
+    test(
+      'dismissing a second alert cancels the prior undo timer '
+      '(only the latest dismissal finalizes after 5s)',
+      () {
+        fakeAsync((async) {
+          cubit = buildCubit();
+
+          vehiclesController.add([
+            vehicle(soc: 15),
+            Vehicle(
+              vin: 'VIN0005',
+              reg: 'TN 09 IJ 7890',
+              model: 'eCargo 55',
+              soc: Reading<double>(
+                clock: clock,
+                value: 12,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              range: Reading<double>(
+                clock: clock,
+                value: 50,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              speed: Reading<double>(
+                clock: clock,
+                value: 12,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              batteryTemp: Reading<double>(
+                clock: clock,
+                value: 30,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              odometer: Reading<double>(
+                clock: clock,
+                value: 1000,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ignitionOn: true,
+            ),
+          ]);
+          async.flushMicrotasks();
+          expect(cubit.state.active, hasLength(2));
+
+          final first = cubit.state.active.first;
+          final second = cubit.state.active.last;
+          expect(first.id, isNot(second.id));
+
+          cubit.dismiss(first.id, DismissReason.onIt);
+          expect(cubit.state.undoable!.alert.id, first.id);
+
+          // Re-dismiss within the window replaces undoable and cancels timer.
+          async.elapse(const Duration(seconds: 2));
+          cubit.dismiss(second.id, DismissReason.wrongAlert);
+          expect(cubit.state.undoable!.alert.id, second.id);
+          expect(cubit.state.active, isEmpty);
+
+          // Only the second dismissal's 5s window should finalize.
+          async.elapse(const Duration(seconds: 5));
+          async.flushMicrotasks();
+          expect(cubit.state.undoable, isNull);
+          expect(cubit.state.active, isEmpty);
+
+          // Continuous breach: first kind can resurface (never suppressed);
+          // second stays suppressed for this session.
+          vehiclesController.add([
+            vehicle(soc: 15),
+            Vehicle(
+              vin: 'VIN0005',
+              reg: 'TN 09 IJ 7890',
+              model: 'eCargo 55',
+              soc: Reading<double>(
+                clock: clock,
+                value: 12,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              range: Reading<double>(
+                clock: clock,
+                value: 50,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              speed: Reading<double>(
+                clock: clock,
+                value: 12,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              batteryTemp: Reading<double>(
+                clock: clock,
+                value: 30,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              odometer: Reading<double>(
+                clock: clock,
+                value: 1000,
+                lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ),
+              lastPingAt: now.subtract(const Duration(minutes: 1)),
+              ignitionOn: true,
+            ),
+          ]);
+          async.flushMicrotasks();
+
+          expect(
+            cubit.state.active.any((a) => a.vin == vin),
+            isTrue,
+            reason: 'first dismissal was replaced, not finalized/suppressed',
+          );
+          expect(
+            cubit.state.active.any((a) => a.vin == 'VIN0005'),
+            isFalse,
+            reason: 'second dismissal finalized after its own 5s window',
+          );
+        });
+      },
+    );
+
+    test(
+      'close() cancels undo timer so it cannot fire on a disposed cubit',
+      () {
+        fakeAsync((async) {
+          cubit = buildCubit();
+
+          vehiclesController.add([vehicle(soc: 15)]);
+          async.flushMicrotasks();
+          final alertId = cubit.state.active.single.id;
+          cubit.dismiss(alertId, DismissReason.onIt);
+          expect(cubit.state.undoable, isNotNull);
+          expect(async.pendingTimers, isNotEmpty);
+
+          // Navigate-away / dispose mid-window cancels the undo Timer.
+          // ignore: unawaited_futures
+          cubit.close();
+          async.flushMicrotasks();
+
+          async.elapse(const Duration(seconds: 5));
+          async.flushMicrotasks();
+
+          // Timer did not fire: undoable was never cleared by _onUndoWindowElapsed.
+          expect(cubit.state.undoable, isNotNull);
+          expect(cubit.state.undoable!.alert.id, alertId);
+        });
+      },
+    );
 
     blocTest<AlertsCubit, AlertsState>(
       'emits active alert on SOC breach (bloc_test stream assertion)',

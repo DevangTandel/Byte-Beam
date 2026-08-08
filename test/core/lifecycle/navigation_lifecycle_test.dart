@@ -11,7 +11,6 @@ import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:byte_beam/features/fleet/presentation/pages/fleet_home_page.dart';
 import 'package:byte_beam/features/vehicle_detail/presentation/bloc/vehicle_detail_bloc.dart';
 import 'package:byte_beam/features/vehicle_detail/presentation/pages/vehicle_detail_page.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';

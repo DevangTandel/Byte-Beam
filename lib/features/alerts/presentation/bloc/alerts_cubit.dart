@@ -1,13 +1,15 @@
 import 'dart:async';
 
-import 'package:bloc/bloc.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/alerts/domain/alert_persistence.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
+import 'package:byte_beam/features/alerts/domain/rules/alert_badge_summary.dart';
 import 'package:byte_beam/features/alerts/domain/rules/alert_engine.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 export 'package:byte_beam/features/alerts/domain/alert_persistence.dart';
+export 'package:byte_beam/features/alerts/domain/rules/alert_badge_summary.dart';
 
 /// Duration the user can undo a dismissal.
 const kAlertUndoWindow = Duration(seconds: 5);
@@ -56,6 +58,10 @@ class AlertsState {
       undoable: clearUndoable ? null : (undoable ?? this.undoable),
     );
   }
+
+  /// Badge count + worst severity for [vin] from [active].
+  AlertBadgeSummary badgeSummaryFor(String vin) =>
+      summarizeAlertsForVin(active, vin);
 }
 
 /// Derives alerts from a vehicle stream and handles dismiss / undo.

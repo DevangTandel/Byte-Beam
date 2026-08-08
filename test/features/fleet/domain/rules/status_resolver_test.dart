@@ -46,6 +46,30 @@ void main() {
         expect(resolveStatus(vehicle, clock), VehicleStatus.moving);
       });
 
+      test('2b. speed > 0 -> moving even when ignitionOn is false', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          speed: 12.5,
+          ignitionOn: false,
+        );
+
+        expect(resolveStatus(vehicle, clock), VehicleStatus.moving);
+      });
+
+      test('2c. speed > 0 -> moving even when ignitionOn is null', () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          speed: 12.5,
+          ignitionOn: null,
+        );
+
+        expect(resolveStatus(vehicle, clock), VehicleStatus.moving);
+      });
+
       test('3. speed == 0 and ignitionOn == true -> idle', () {
         final clock = FakeClock(now);
         final vehicle = _vehicle(

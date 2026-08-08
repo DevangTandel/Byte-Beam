@@ -2,7 +2,7 @@ import 'package:byte_beam/core/clock/clock.dart';
 
 /// Age strictly older than this duration is considered stale for a [Reading].
 ///
-/// "Older than 5 minutes" means [age] **>** 5 minutes (not ≥).
+/// "Older than 5 minutes" means age **>** 5 minutes (not ≥).
 const kStaleThreshold = Duration(minutes: 5);
 
 /// A telemetry value with optional freshness metadata.

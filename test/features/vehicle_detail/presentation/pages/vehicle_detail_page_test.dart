@@ -67,13 +67,13 @@ void main() {
   }
 
   Alert buildAlert() => Alert(
-        id: 'alert-1',
-        vin: vin,
-        kind: AlertKind.lowBattery,
-        severity: AlertSeverity.warning,
-        raisedAt: now,
-        isBasedOnStaleData: false,
-      );
+    id: 'alert-1',
+    vin: vin,
+    kind: AlertKind.lowBattery,
+    severity: AlertSeverity.warning,
+    raisedAt: now,
+    isBasedOnStaleData: false,
+  );
 
   VehicleDetailLoaded loadedState({List<Alert>? alerts}) {
     final vehicle = buildVehicle();
@@ -142,33 +142,42 @@ void main() {
 
         final styles = AppTheme.light().extension<VerdictTheme>()!;
 
-        // SOC alert
+        // SOC alert (fractionDigits: 2 → "15.00 %")
         final socPill = tester.widget<VerdictPill>(
           find.byKey(const Key('reading-soc')),
         );
         expect(socPill.verdict, Verdict.alert);
         expect(socPill.value, 15);
         expect(socPill.unit, '%');
+        expect(socPill.fractionDigits, 2);
+        expect(find.text('15.00 %'), findsOneWidget);
         expect(
-          tester.widget<Text>(find.text('15 %')).style?.color,
+          tester.widget<Text>(find.text('15.00 %')).style?.color,
           styles.alertValueColor,
         );
 
-        // Range normal
+        // Range normal (fractionDigits: 2 → "34.00 km")
         final rangePill = tester.widget<VerdictPill>(
           find.byKey(const Key('reading-range')),
         );
         expect(rangePill.verdict, Verdict.normal);
         expect(rangePill.value, 34);
         expect(rangePill.unit, 'km');
+        expect(rangePill.fractionDigits, 2);
+        expect(find.text('34.00 km'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('34.00 km')).style?.color,
+          styles.normalValueColor,
+        );
 
-        // Speed normal
+        // Speed normal (no fixed decimals)
         final speedPill = tester.widget<VerdictPill>(
           find.byKey(const Key('reading-speed')),
         );
         expect(speedPill.verdict, Verdict.normal);
         expect(speedPill.value, 38);
         expect(speedPill.unit, 'km/h');
+        expect(find.text('38 km/h'), findsOneWidget);
 
         // Battery temp alert
         final tempPill = tester.widget<VerdictPill>(
@@ -177,14 +186,21 @@ void main() {
         expect(tempPill.verdict, Verdict.alert);
         expect(tempPill.value, 47);
         expect(tempPill.unit, '°C');
+        expect(find.text('47 °C'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('47 °C')).style?.color,
+          styles.alertValueColor,
+        );
 
-        // Odometer normal
+        // Odometer normal (fractionDigits: 2 → "12780.00 km")
         final odoPill = tester.widget<VerdictPill>(
           find.byKey(const Key('reading-odometer')),
         );
         expect(odoPill.verdict, Verdict.normal);
         expect(odoPill.value, 12780);
         expect(odoPill.unit, 'km');
+        expect(odoPill.fractionDigits, 2);
+        expect(find.text('12780.00 km'), findsOneWidget);
 
         // Last ping (1 minute old → normal)
         final pingPill = tester.widget<VerdictPill>(
@@ -193,6 +209,238 @@ void main() {
         expect(pingPill.verdict, Verdict.normal);
         expect(pingPill.value, 1);
         expect(pingPill.unit, 'm ago');
+        expect(find.text('1 m ago'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'last ping age 4:59 floors to "4 m ago" not "5 m ago"',
+      (tester) async {
+        const pingAge = Duration(minutes: 4, seconds: 59);
+        Reading<double> reading(double? value) => Reading<double>(
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
+
+        final vehicle = Vehicle(
+          vin: vin,
+          reg: 'MH 12 EF 9012',
+          model: 'eVan 30',
+          soc: reading(50),
+          range: reading(100),
+          speed: reading(0),
+          batteryTemp: reading(30),
+          odometer: reading(1000),
+          lastPingAt: now.subtract(pingAge),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.normal,
+              range: Verdict.normal,
+              speed: Verdict.normal,
+              batteryTemp: Verdict.normal,
+              odometer: Verdict.normal,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        expect(find.text('4 m ago'), findsOneWidget);
+        expect(find.text('5 m ago'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'mixed UI: StatusChip not Offline while SOC pill is STALE grey '
+      '(6 min ping: stale but online)',
+      (tester) async {
+        const pingAge = Duration(minutes: 6);
+        Reading<double> reading(double? value) => Reading<double>(
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
+
+        final vehicle = Vehicle(
+          vin: vin,
+          reg: 'MH 12 EF 9012',
+          model: 'eVan 30',
+          soc: reading(8),
+          range: reading(15),
+          speed: reading(0),
+          batteryTemp: reading(30),
+          odometer: reading(1000),
+          lastPingAt: now.subtract(pingAge),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.stale,
+              range: Verdict.stale,
+              speed: Verdict.stale,
+              batteryTemp: Verdict.stale,
+              odometer: Verdict.stale,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final styles = AppTheme.light().extension<VerdictTheme>()!;
+        expect(find.text('Stopped'), findsOneWidget);
+        expect(find.text('Offline'), findsNothing);
+        expect(find.text('8.00 %'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('8.00 %')).style?.color,
+          styles.staleValueColor,
+        );
+        expect(find.text('data 6 min old'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'VIN0006 null range and batteryTemp render dash "—" with no verdict',
+      (tester) async {
+        const vin0006 = 'VIN0006';
+        when(() => mockDetailBloc.vin).thenReturn(vin0006);
+
+        Reading<double> reading(double? value) => Reading<double>(
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+        );
+
+        final vehicle = Vehicle(
+          vin: vin0006,
+          reg: 'KA 02 KL 2468',
+          model: 'eVan 30',
+          soc: reading(44),
+          range: reading(null),
+          speed: reading(0),
+          batteryTemp: reading(null),
+          odometer: reading(55890),
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.normal,
+              range: null,
+              speed: Verdict.normal,
+              batteryTemp: null,
+              odometer: Verdict.normal,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final rangePill = tester.widget<VerdictPill>(
+          find.byKey(const Key('reading-range')),
+        );
+        final tempPill = tester.widget<VerdictPill>(
+          find.byKey(const Key('reading-batteryTemp')),
+        );
+
+        expect(vehicle.vin, vin0006);
+        expect(rangePill.value, isNull);
+        expect(rangePill.verdict, isNull);
+        expect(tempPill.value, isNull);
+        expect(tempPill.verdict, isNull);
+        expect(find.text('—'), findsNWidgets(2));
+        expect(find.textContaining('old'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'VIN0007 SOC 8% renders STALE grey, not ALERT red '
+      '(staleness overrides critical SOC breach)',
+      (tester) async {
+        const vin0007 = 'VIN0007';
+        when(() => mockDetailBloc.vin).thenReturn(vin0007);
+
+        const pingAge = Duration(seconds: 720);
+        Reading<double> reading(double? value) => Reading<double>(
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
+
+        final vehicle = Vehicle(
+          vin: vin0007,
+          reg: 'AP 16 MN 1357',
+          model: 'eCargo 55',
+          soc: reading(8),
+          range: reading(15),
+          speed: reading(0),
+          batteryTemp: reading(36),
+          odometer: reading(91004),
+          lastPingAt: now.subtract(pingAge),
+          ignitionOn: true,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.offline,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.stale,
+              range: Verdict.stale,
+              speed: Verdict.stale,
+              batteryTemp: Verdict.stale,
+              odometer: Verdict.stale,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final styles = AppTheme.light().extension<VerdictTheme>()!;
+        final socPill = tester.widget<VerdictPill>(
+          find.byKey(const Key('reading-soc')),
+        );
+
+        expect(vehicle.vin, vin0007);
+        expect(socPill.value, 8);
+        expect(socPill.verdict, Verdict.stale);
+        expect(socPill.verdict, isNot(Verdict.alert));
+        expect(find.text('8.00 %'), findsOneWidget);
+        expect(find.textContaining('data'), findsWidgets);
+
+        final socColor = tester.widget<Text>(find.text('8.00 %')).style?.color;
+        expect(socColor, styles.staleValueColor);
+        expect(socColor, isNot(styles.alertValueColor));
       },
     );
 
@@ -234,8 +482,9 @@ void main() {
     testWidgets(
       'selecting a reason closes sheet, removes alert, shows UNDO snackbar',
       (tester) async {
-        final detailStates =
-            StreamController<VehicleDetailState>.broadcast(sync: true);
+        final detailStates = StreamController<VehicleDetailState>.broadcast(
+          sync: true,
+        );
         addTearDown(detailStates.close);
 
         final withAlert = loadedState();
@@ -273,8 +522,9 @@ void main() {
     );
 
     testWidgets('tapping UNDO restores the alert to the list', (tester) async {
-      final detailStates =
-          StreamController<VehicleDetailState>.broadcast(sync: true);
+      final detailStates = StreamController<VehicleDetailState>.broadcast(
+        sync: true,
+      );
       addTearDown(detailStates.close);
 
       final withAlert = loadedState();

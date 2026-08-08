@@ -9,6 +9,9 @@ import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
 import 'package:byte_beam/features/fleet/domain/entities/reading.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
+import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
+import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
+import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:byte_beam/features/fleet/presentation/pages/fleet_home_page.dart';
 import 'package:byte_beam/features/fleet/presentation/widgets/vehicle_card.dart';
@@ -35,36 +38,55 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   late FakeClock clock;
   late MockFleetBloc mockBloc;
   late MockAlertsCubit mockAlertsCubit;
 
-  Vehicle vehicle(String vin, {double speed = 0, bool? ignitionOn = false}) {
+  Vehicle vehicle(
+    String vin, {
+    double speed = 0,
+    bool? ignitionOn = false,
+    double? soc = 50,
+    double? range = 100,
+    Duration age = const Duration(minutes: 1),
+  }) {
     Reading<double> reading(double? value) => Reading<double>(
-          clock: clock,
-          value: value,
-          lastPingAt: now.subtract(const Duration(minutes: 1)),
-        );
+      clock: clock,
+      value: value,
+      lastPingAt: now.subtract(age),
+    );
 
     return Vehicle(
       vin: vin,
       reg: 'REG-$vin',
       model: 'eCargo 55',
-      soc: reading(50),
-      range: reading(100),
+      soc: reading(soc),
+      range: reading(range),
       speed: reading(speed),
       batteryTemp: reading(30),
       odometer: reading(1000),
-      lastPingAt: now.subtract(const Duration(minutes: 1)),
+      lastPingAt: now.subtract(age),
       ignitionOn: ignitionOn,
     );
   }
 
-  List<Vehicle> eightVehicles() => [
-        for (var i = 1; i <= 8; i++)
-          vehicle('VIN000$i', speed: i <= 3 ? 20 : 0, ignitionOn: i == 2),
-      ];
+  /// Mirrors [FleetBloc] projection for mocked [FleetLoaded] states.
+  FleetListItem itemFor(Vehicle v) {
+    return FleetListItem(
+      vehicle: v,
+      status: resolveStatus(v, clock),
+      socVerdict: evaluateStaleness(v.soc, kSocBounds, clock),
+      rangeVerdict: evaluateStaleness(v.range, kRangeBounds, clock),
+    );
+  }
+
+  List<FleetListItem> eightItems() => [
+    for (var i = 1; i <= 8; i++)
+      itemFor(
+        vehicle('VIN000$i', speed: i <= 3 ? 20 : 0, ignitionOn: i == 2),
+      ),
+  ];
 
   Widget pumpPage() {
     return MaterialApp(
@@ -74,7 +96,7 @@ void main() {
           BlocProvider<FleetBloc>.value(value: mockBloc),
           BlocProvider<AlertsCubit>.value(value: mockAlertsCubit),
         ],
-        child: FleetHomePage(clock: clock),
+        child: const FleetHomePage(),
       ),
     );
   }
@@ -97,7 +119,6 @@ void main() {
 
   group('FleetHomePage', () {
     testWidgets('renders 8 vehicle cards from a loaded state', (tester) async {
-      final vehicles = eightVehicles();
       const counts = FleetStatusCounts(
         all: 8,
         moving: 3,
@@ -106,7 +127,7 @@ void main() {
         offline: 0,
       );
       final loaded = FleetLoaded(
-        vehicles: vehicles,
+        items: eightItems(),
         filter: FleetFilter.all,
         counts: counts,
       );
@@ -128,11 +149,94 @@ void main() {
     });
 
     testWidgets(
-      'shows AlertBadge on vehicle cards that have active alerts',
+      'binds FleetListItem status + verdicts without re-deriving them',
       (tester) async {
-        final vehicles = eightVehicles();
+        // Forced values prove the page trusts FleetBloc projection.
+        final item = FleetListItem(
+          vehicle: vehicle('VIN0001', speed: 20, soc: 80, range: 172),
+          status: VehicleStatus.idle,
+          socVerdict: Verdict.alert,
+          rangeVerdict: Verdict.stale,
+        );
+
+        whenListen(
+          mockBloc,
+          const Stream<FleetState>.empty(),
+          initialState: FleetLoaded(
+            items: [item],
+            filter: FleetFilter.all,
+            counts: const FleetStatusCounts(
+              all: 1,
+              moving: 0,
+              idle: 1,
+              stopped: 0,
+              offline: 0,
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final card = tester.widget<VehicleCard>(find.byType(VehicleCard));
+        expect(card.status, VehicleStatus.idle);
+        expect(card.socVerdict, Verdict.alert);
+        expect(card.rangeVerdict, Verdict.stale);
+      },
+    );
+
+    testWidgets(
+      'filter chip counts update when FleetBloc emits a new status mix',
+      (tester) async {
+        final items = eightItems();
+        final initial = FleetLoaded(
+          items: items,
+          filter: FleetFilter.all,
+          counts: const FleetStatusCounts(
+            all: 8,
+            moving: 3,
+            idle: 1,
+            stopped: 4,
+            offline: 0,
+          ),
+        );
+        final afterTick = FleetLoaded(
+          items: items,
+          filter: FleetFilter.all,
+          counts: const FleetStatusCounts(
+            all: 8,
+            moving: 2,
+            idle: 1,
+            stopped: 5,
+            offline: 0,
+          ),
+        );
+
+        final states = StreamController<FleetState>.broadcast(sync: true);
+        addTearDown(states.close);
+
+        whenListen(mockBloc, states.stream, initialState: initial);
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        expect(find.text('Moving (3)'), findsOneWidget);
+        expect(find.text('Stopped (4)'), findsOneWidget);
+
+        states.add(afterTick);
+        await tester.pump();
+
+        expect(find.text('Moving (3)'), findsNothing);
+        expect(find.text('Moving (2)'), findsOneWidget);
+        expect(find.text('Stopped (5)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'shows AlertBadge from AlertsState.badgeSummaryFor',
+      (tester) async {
         final loaded = FleetLoaded(
-          vehicles: vehicles,
+          items: eightItems(),
           filter: FleetFilter.all,
           counts: const FleetStatusCounts(
             all: 8,
@@ -225,12 +329,12 @@ void main() {
           offline: 1,
         );
         final withVehicles = FleetLoaded(
-          vehicles: eightVehicles(),
+          items: eightItems(),
           filter: FleetFilter.all,
           counts: counts,
         );
         const emptyIdle = FleetLoaded(
-          vehicles: [],
+          items: [],
           filter: FleetFilter.idle,
           counts: counts,
         );

@@ -1,18 +1,24 @@
-import 'package:byte_beam/core/theme/app_theme.dart';
 import 'package:byte_beam/core/widgets/alert_badge.dart';
 import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
+import 'package:byte_beam/core/widgets/verdict_pill.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
+import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:flutter/material.dart';
 
 /// Fleet list row for a single [Vehicle].
+///
+/// Domain decisions ([status], [socVerdict], [rangeVerdict]) are precomputed
+/// by the caller — this widget only binds values to UI.
 class VehicleCard extends StatelessWidget {
   /// Creates a [VehicleCard].
   const VehicleCard({
     required this.vehicle,
     required this.status,
+    required this.socVerdict,
+    required this.rangeVerdict,
     this.alertCount = 0,
     this.alertSeverity,
     this.onTap,
@@ -24,6 +30,12 @@ class VehicleCard extends StatelessWidget {
 
   /// Precomputed operational status (no logic in the widget).
   final VehicleStatus status;
+
+  /// Precomputed SOC honesty verdict (null → dash).
+  final Verdict? socVerdict;
+
+  /// Precomputed range honesty verdict (null → dash).
+  final Verdict? rangeVerdict;
 
   /// Active alert count for this vehicle (badge hidden when 0).
   final int alertCount;
@@ -38,8 +50,6 @@ class VehicleCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
-    final verdictTheme = Theme.of(context).extension<VerdictTheme>()!;
-    final soc = vehicle.soc.value;
     final showBadge = alertCount > 0 && alertSeverity != null;
 
     return OutlinedCard(
@@ -73,7 +83,7 @@ class VehicleCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${vehicle.model} · ${vehicle.vin}',
-                          style: textTheme.bodySmall?.copyWith(
+                          style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),
@@ -91,42 +101,71 @@ class VehicleCard extends StatelessWidget {
                   StatusChip(status: status),
                 ],
               ),
-              if (soc != null) ...[
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Icon(
-                      Icons.battery_charging_full,
-                      size: 20,
-                      color: colorScheme.onSurfaceVariant,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(999),
-                        child: LinearProgressIndicator(
-                          value: (soc.clamp(0, 100)) / 100,
-                          minHeight: 8,
-                          backgroundColor: colorScheme.surfaceContainerHighest,
-                          color: verdictTheme.normalValueColor,
-                        ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: _ReadingColumn(
+                      label: 'SOC',
+                      pill: VerdictPill(
+                        key: const Key('home-reading-soc'),
+                        verdict: socVerdict,
+                        value: vehicle.soc.value,
+                        unit: '%',
+                        age: vehicle.soc.age,
+                        fractionDigits: 2,
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${soc.round()}%',
-                      style: textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurfaceVariant,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ReadingColumn(
+                      label: 'Range',
+                      pill: VerdictPill(
+                        key: const Key('home-reading-range'),
+                        verdict: rangeVerdict,
+                        value: vehicle.range.value,
+                        unit: 'km',
+                        age: vehicle.range.age,
+                        fractionDigits: 2,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ReadingColumn extends StatelessWidget {
+  const _ReadingColumn({
+    required this.label,
+    required this.pill,
+  });
+
+  final String label;
+  final VerdictPill pill;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            color: colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 4),
+        pill,
+      ],
     );
   }
 }

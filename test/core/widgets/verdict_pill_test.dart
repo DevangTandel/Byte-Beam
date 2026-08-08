@@ -78,6 +78,26 @@ void main() {
       );
     });
 
+    testWidgets(
+      'age caption floors sub-minute remainder: 4:59 -> "data 4 min old" '
+      'not "5 min"',
+      (tester) async {
+        await tester.pumpWidget(
+          wrap(
+            const VerdictPill(
+              verdict: Verdict.stale,
+              value: 50,
+              unit: '%',
+              age: Duration(minutes: 4, seconds: 59),
+            ),
+          ),
+        );
+
+        expect(find.text('data 4 min old'), findsOneWidget);
+        expect(find.text('data 5 min old'), findsNothing);
+      },
+    );
+
     testWidgets('fractionDigits: formats with fixed decimals', (tester) async {
       await tester.pumpWidget(
         wrap(

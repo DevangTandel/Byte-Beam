@@ -4,6 +4,8 @@ import 'package:bloc/bloc.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
+import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
+import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 
 /// Chip / list filter for the fleet screen.
@@ -64,6 +66,32 @@ class FleetStatusCounts {
   int get hashCode => Object.hash(all, moving, idle, stopped, offline);
 }
 
+/// One fleet-list row with domain decisions already applied.
+///
+/// The home page binds these fields directly — it must not re-run
+/// [resolveStatus] / [evaluateStaleness].
+class FleetListItem {
+  /// Creates a [FleetListItem].
+  const FleetListItem({
+    required this.vehicle,
+    required this.status,
+    required this.socVerdict,
+    required this.rangeVerdict,
+  });
+
+  /// Underlying vehicle telemetry.
+  final Vehicle vehicle;
+
+  /// Precomputed operational status.
+  final VehicleStatus status;
+
+  /// Precomputed SOC honesty verdict (null → dash).
+  final Verdict? socVerdict;
+
+  /// Precomputed range honesty verdict (null → dash).
+  final Verdict? rangeVerdict;
+}
+
 /// Fleet screen events.
 sealed class FleetEvent {
   const FleetEvent();
@@ -105,13 +133,13 @@ class FleetInitial extends FleetState {
 class FleetLoaded extends FleetState {
   /// Creates a [FleetLoaded] state.
   const FleetLoaded({
-    required this.vehicles,
+    required this.items,
     required this.filter,
     required this.counts,
   });
 
-  /// Vehicles visible under [filter].
-  final List<Vehicle> vehicles;
+  /// Visible list rows under [filter] (status + verdicts precomputed).
+  final List<FleetListItem> items;
 
   /// Active status filter.
   final FleetFilter filter;
@@ -120,15 +148,15 @@ class FleetLoaded extends FleetState {
   final FleetStatusCounts counts;
 }
 
-/// Manages fleet list filtering and live status counts.
+/// Manages fleet list projection, filtering, and live status counts.
 class FleetBloc extends Bloc<FleetEvent, FleetState> {
   /// Creates a [FleetBloc].
   FleetBloc({
     required FleetRepository repository,
     required Clock clock,
-  })  : _repository = repository,
-        _clock = clock,
-        super(const FleetInitial()) {
+  }) : _repository = repository,
+       _clock = clock,
+       super(const FleetInitial()) {
     on<FleetStarted>(_onStarted);
     on<_FleetUpdated>(_onFleetUpdated);
     on<FilterChanged>(_onFilterChanged);
@@ -171,22 +199,34 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
   }
 
   FleetLoaded _toLoaded() {
-    final counts = _countsFor(_allVehicles);
+    final allItems = _project(_allVehicles);
     return FleetLoaded(
-      vehicles: _applyFilter(_allVehicles, _filter),
+      items: _applyFilter(allItems, _filter),
       filter: _filter,
-      counts: counts,
+      counts: _countsFor(allItems),
     );
   }
 
-  FleetStatusCounts _countsFor(List<Vehicle> vehicles) {
+  List<FleetListItem> _project(List<Vehicle> vehicles) {
+    return [
+      for (final vehicle in vehicles)
+        FleetListItem(
+          vehicle: vehicle,
+          status: resolveStatus(vehicle, _clock),
+          socVerdict: evaluateStaleness(vehicle.soc, kSocBounds, _clock),
+          rangeVerdict: evaluateStaleness(vehicle.range, kRangeBounds, _clock),
+        ),
+    ];
+  }
+
+  FleetStatusCounts _countsFor(List<FleetListItem> items) {
     var moving = 0;
     var idle = 0;
     var stopped = 0;
     var offline = 0;
 
-    for (final vehicle in vehicles) {
-      switch (resolveStatus(vehicle, _clock)) {
+    for (final item in items) {
+      switch (item.status) {
         case VehicleStatus.moving:
           moving++;
         case VehicleStatus.idle:
@@ -199,7 +239,7 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     }
 
     return FleetStatusCounts(
-      all: vehicles.length,
+      all: items.length,
       moving: moving,
       idle: idle,
       stopped: stopped,
@@ -207,9 +247,12 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     );
   }
 
-  List<Vehicle> _applyFilter(List<Vehicle> vehicles, FleetFilter filter) {
+  List<FleetListItem> _applyFilter(
+    List<FleetListItem> items,
+    FleetFilter filter,
+  ) {
     if (filter == FleetFilter.all) {
-      return List<Vehicle>.unmodifiable(vehicles);
+      return List<FleetListItem>.unmodifiable(items);
     }
 
     final status = switch (filter) {
@@ -221,8 +264,8 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     };
 
     return [
-      for (final vehicle in vehicles)
-        if (resolveStatus(vehicle, _clock) == status) vehicle,
+      for (final item in items)
+        if (item.status == status) item,
     ];
   }
 

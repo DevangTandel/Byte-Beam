@@ -1,34 +1,15 @@
 import 'dart:async';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
-import 'package:byte_beam/features/alerts/domain/rules/alert_engine.dart';
 import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
+import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
 import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-/// UI-ready bounds for SOC (aligned with low-battery alert threshold).
-const kSocBounds = ThresholdBounds(
-  min: kLowBatteryWarningThreshold,
-  max: 100,
-);
-
-/// UI-ready bounds for battery temperature (°C).
-const kBatteryTempBounds = ThresholdBounds(
-  min: 0,
-  max: kBatteryOverheatingThreshold,
-);
-
-/// UI-ready bounds for speed (km/h).
-const kSpeedBounds = ThresholdBounds(min: 0, max: 200);
-
-/// UI-ready bounds for range (km).
-const kRangeBounds = ThresholdBounds(min: 0, max: 1000);
-
-/// UI-ready bounds for odometer (km).
-const kOdometerBounds = ThresholdBounds(min: 0, max: 5000000);
+export 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
 
 /// Per-parameter [Verdict]s for the vehicle detail screen.
 class ParameterVerdicts {

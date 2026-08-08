@@ -205,6 +205,77 @@ void main() {
         ),
       );
     });
+
+    test('8. existing lowBattery WARNING escalates to CRITICAL on same id '
+        'when fresh SOC drops below 10% (list length stays 1)', () {
+      final clock = FakeClock(now);
+      final raisedAt = now.subtract(const Duration(minutes: 2));
+      const existingId = 'alert-low-battery-escalate';
+      final previous = [
+        Alert(
+          id: existingId,
+          vin: vin,
+          kind: AlertKind.lowBattery,
+          severity: AlertSeverity.warning,
+          raisedAt: raisedAt,
+          isBasedOnStaleData: false,
+        ),
+      ];
+      final vehicle = _vehicle(
+        clock: clock,
+        vin: vin,
+        now: now,
+        soc: 5,
+        socAge: const Duration(minutes: 1),
+        batteryTemp: 30,
+      );
+
+      final alerts = evaluateAlerts(vehicle, previous, clock);
+
+      expect(alerts, hasLength(1));
+      expect(alerts.single.id, existingId);
+      expect(alerts.single.kind, AlertKind.lowBattery);
+      expect(alerts.single.severity, AlertSeverity.critical);
+      expect(alerts.single.raisedAt, raisedAt);
+      expect(
+        alerts.where((a) => a.kind == AlertKind.lowBattery),
+        hasLength(1),
+        reason: 'escalation must not stack a second lowBattery alert',
+      );
+    });
+
+    test('9. fresh SOC < 20% and temp > 45C -> two distinct alerts '
+        '(lowBattery + batteryOverheating co-exist)', () {
+      final clock = FakeClock(now);
+      final vehicle = _vehicle(
+        clock: clock,
+        vin: vin,
+        now: now,
+        soc: 15,
+        socAge: const Duration(minutes: 1),
+        batteryTemp: 46,
+        batteryTempAge: const Duration(minutes: 1),
+      );
+
+      final alerts = evaluateAlerts(vehicle, const [], clock);
+
+      expect(alerts, hasLength(2));
+      expect(
+        alerts.map((a) => a.kind).toSet(),
+        {AlertKind.lowBattery, AlertKind.batteryOverheating},
+      );
+      expect(
+        alerts.singleWhere((a) => a.kind == AlertKind.lowBattery).severity,
+        AlertSeverity.warning,
+      );
+      expect(
+        alerts
+            .singleWhere((a) => a.kind == AlertKind.batteryOverheating)
+            .severity,
+        AlertSeverity.critical,
+      );
+      expect(alerts[0].id, isNot(alerts[1].id));
+    });
   });
 }
 

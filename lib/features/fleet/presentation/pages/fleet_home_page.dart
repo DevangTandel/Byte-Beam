@@ -1,10 +1,6 @@
-import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/core/widgets/empty_state.dart';
 import 'package:byte_beam/core/widgets/filter_chip_bar.dart';
-import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
-import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
-import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:byte_beam/features/fleet/presentation/widgets/vehicle_card.dart';
 import 'package:flutter/material.dart';
@@ -12,12 +8,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 /// Fleet home: filter chips + vehicle list (or empty state).
+///
+/// Domain decisions (status, SOC/range verdicts, alert badges) come from
+/// [FleetBloc] / [AlertsCubit] — this page only composes UI.
 class FleetHomePage extends StatelessWidget {
   /// Creates a [FleetHomePage].
-  const FleetHomePage({required this.clock, super.key});
-
-  /// Clock used to resolve [VehicleStatus] for list cards.
-  final Clock clock;
+  const FleetHomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -54,21 +50,17 @@ class FleetHomePage extends StatelessWidget {
                       ),
                     ),
                     Expanded(
-                      child: fleetState.vehicles.isEmpty
+                      child: fleetState.items.isEmpty
                           ? const EmptyState(
                               title: 'No vehicles',
                               message:
-                                  'Nothing matches this filter. Try another status.',
+                                  '''Nothing matches this filter. Try another status.''',
                             )
                           : SingleChildScrollView(
                               child: Column(
                                 children: [
-                                  for (final vehicle in fleetState.vehicles)
-                                    _vehicleCard(
-                                      context,
-                                      vehicle,
-                                      alertsState.active,
-                                    ),
+                                  for (final item in fleetState.items)
+                                    _vehicleCard(context, item, alertsState),
                                 ],
                               ),
                             ),
@@ -85,16 +77,18 @@ class FleetHomePage extends StatelessWidget {
 
   Widget _vehicleCard(
     BuildContext context,
-    Vehicle vehicle,
-    List<Alert> activeAlerts,
+    FleetListItem item,
+    AlertsState alertsState,
   ) {
-    final summary = _alertSummaryForVin(activeAlerts, vehicle.vin);
+    final badge = alertsState.badgeSummaryFor(item.vehicle.vin);
     return VehicleCard(
-      vehicle: vehicle,
-      status: resolveStatus(vehicle, clock),
-      alertCount: summary.count,
-      alertSeverity: summary.severity,
-      onTap: () => context.push('/vehicle/${vehicle.vin}'),
+      vehicle: item.vehicle,
+      status: item.status,
+      socVerdict: item.socVerdict,
+      rangeVerdict: item.rangeVerdict,
+      alertCount: badge.count,
+      alertSeverity: badge.severity,
+      onTap: () => context.push('/vehicle/${item.vehicle.vin}'),
     );
   }
 
@@ -107,32 +101,4 @@ class FleetHomePage extends StatelessWidget {
       FleetFilter.offline => 'Offline',
     };
   }
-}
-
-/// Per-vin alert count and worst severity for [VehicleCard].
-({int count, AlertSeverity? severity}) _alertSummaryForVin(
-  List<Alert> active,
-  String vin,
-) {
-  var count = 0;
-  var hasCritical = false;
-
-  for (final alert in active) {
-    if (alert.vin != vin) {
-      continue;
-    }
-    count++;
-    if (alert.severity == AlertSeverity.critical) {
-      hasCritical = true;
-    }
-  }
-
-  if (count == 0) {
-    return (count: 0, severity: null);
-  }
-
-  return (
-    count: count,
-    severity: hasCritical ? AlertSeverity.critical : AlertSeverity.warning,
-  );
 }
