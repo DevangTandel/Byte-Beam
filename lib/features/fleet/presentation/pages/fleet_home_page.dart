@@ -1,6 +1,9 @@
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/core/widgets/empty_state.dart';
 import 'package:byte_beam/core/widgets/filter_chip_bar.dart';
+import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
+import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
+import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:byte_beam/features/fleet/presentation/widgets/vehicle_card.dart';
@@ -22,59 +25,76 @@ class FleetHomePage extends StatelessWidget {
       appBar: AppBar(title: const Text('Fleet')),
       body: SafeArea(
         child: BlocBuilder<FleetBloc, FleetState>(
-          builder: (context, state) {
-            if (state is! FleetLoaded) {
+          builder: (context, fleetState) {
+            if (fleetState is! FleetLoaded) {
               return const Center(child: CircularProgressIndicator());
             }
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                  child: FilterChipBar<FleetFilter>(
-                    options: FleetFilter.values,
-                    counts: {
-                      FleetFilter.all: state.counts.all,
-                      FleetFilter.moving: state.counts.moving,
-                      FleetFilter.idle: state.counts.idle,
-                      FleetFilter.stopped: state.counts.stopped,
-                      FleetFilter.offline: state.counts.offline,
-                    },
-                    selected: state.filter,
-                    labelBuilder: _labelFor,
-                    onChanged: (filter) {
-                      context.read<FleetBloc>().add(FilterChanged(filter));
-                    },
-                  ),
-                ),
-                Expanded(
-                  child: state.vehicles.isEmpty
-                      ? const EmptyState(
-                          title: 'No vehicles',
-                          message:
-                              'Nothing matches this filter. Try another status.',
-                        )
-                      : SingleChildScrollView(
-                          child: Column(
-                            children: [
-                              for (final vehicle in state.vehicles)
-                                VehicleCard(
-                                  vehicle: vehicle,
-                                  status: resolveStatus(vehicle, clock),
-                                  onTap: () => context.push(
-                                    '/vehicle/${vehicle.vin}',
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                ),
-              ],
+            return BlocBuilder<AlertsCubit, AlertsState>(
+              builder: (context, alertsState) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                      child: FilterChipBar<FleetFilter>(
+                        options: FleetFilter.values,
+                        counts: {
+                          FleetFilter.all: fleetState.counts.all,
+                          FleetFilter.moving: fleetState.counts.moving,
+                          FleetFilter.idle: fleetState.counts.idle,
+                          FleetFilter.stopped: fleetState.counts.stopped,
+                          FleetFilter.offline: fleetState.counts.offline,
+                        },
+                        selected: fleetState.filter,
+                        labelBuilder: _labelFor,
+                        onChanged: (filter) {
+                          context.read<FleetBloc>().add(FilterChanged(filter));
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: fleetState.vehicles.isEmpty
+                          ? const EmptyState(
+                              title: 'No vehicles',
+                              message:
+                                  'Nothing matches this filter. Try another status.',
+                            )
+                          : SingleChildScrollView(
+                              child: Column(
+                                children: [
+                                  for (final vehicle in fleetState.vehicles)
+                                    _vehicleCard(
+                                      context,
+                                      vehicle,
+                                      alertsState.active,
+                                    ),
+                                ],
+                              ),
+                            ),
+                    ),
+                  ],
+                );
+              },
             );
           },
         ),
       ),
+    );
+  }
+
+  Widget _vehicleCard(
+    BuildContext context,
+    Vehicle vehicle,
+    List<Alert> activeAlerts,
+  ) {
+    final summary = _alertSummaryForVin(activeAlerts, vehicle.vin);
+    return VehicleCard(
+      vehicle: vehicle,
+      status: resolveStatus(vehicle, clock),
+      alertCount: summary.count,
+      alertSeverity: summary.severity,
+      onTap: () => context.push('/vehicle/${vehicle.vin}'),
     );
   }
 
@@ -87,4 +107,32 @@ class FleetHomePage extends StatelessWidget {
       FleetFilter.offline => 'Offline',
     };
   }
+}
+
+/// Per-vin alert count and worst severity for [VehicleCard].
+({int count, AlertSeverity? severity}) _alertSummaryForVin(
+  List<Alert> active,
+  String vin,
+) {
+  var count = 0;
+  var hasCritical = false;
+
+  for (final alert in active) {
+    if (alert.vin != vin) {
+      continue;
+    }
+    count++;
+    if (alert.severity == AlertSeverity.critical) {
+      hasCritical = true;
+    }
+  }
+
+  if (count == 0) {
+    return (count: 0, severity: null);
+  }
+
+  return (
+    count: count,
+    severity: hasCritical ? AlertSeverity.critical : AlertSeverity.warning,
+  );
 }

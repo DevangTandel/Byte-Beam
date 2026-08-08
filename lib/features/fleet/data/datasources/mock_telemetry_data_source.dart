@@ -11,15 +11,31 @@ const kOfflinePingSeconds = 600;
 /// Tick interval for simulated telemetry updates.
 const kTelemetryTick = Duration(seconds: 3);
 
+/// Full-pack range in kilometres at 100% SOC.
+const kFullBatteryRangeKm = 532.0;
+
+/// Estimated remaining range from battery state of charge.
+double? rangeKmFromSoc(double? socPercent) {
+  if (socPercent == null) {
+    return null;
+  }
+  return socPercent / 100.0 * kFullBatteryRangeKm;
+}
+
 /// In-memory telemetry source that mutates the seed fleet every 3 seconds.
+///
+/// SOC (battery %) drains on each tick for moving vehicles. Remaining range
+/// is always `socPercent / 100 * [kFullBatteryRangeKm]`.
 class MockTelemetryDataSource implements TelemetryDataSource {
   /// Creates a mock source from [seed], advancing with [random] jitter.
   MockTelemetryDataSource({
     required this.clock,
     required List<VehicleModel> seed,
     Random? random,
-  })  : _random = random ?? Random(42),
-        _fleet = List<VehicleModel>.of(seed);
+  }) : _random = random ?? Random(42),
+       _fleet = [
+         for (final vehicle in seed) _withRangeFromSoc(vehicle),
+       ];
 
   /// App-launch / wall clock used by callers mapping to domain.
   final Clock clock;
@@ -87,12 +103,23 @@ class MockTelemetryDataSource implements TelemetryDataSource {
     final odoDelta = vehicle.speedKmh * (kTelemetryTick.inSeconds / 3600);
 
     final soc = vehicle.socPercent;
+    if (soc == null) {
+      return vehicle.copyWith(
+        odometerKm: vehicle.odometerKm + odoDelta,
+      );
+    }
+
+    // Battery % only decreases tick-over-tick for moving vehicles.
+    final nextSoc = (soc - socDelta).clamp(0.0, 100.0);
     return vehicle.copyWith(
-      socPercent: soc == null
-          ? null
-          : (soc - socDelta).clamp(0.0, 100.0).toDouble(),
+      socPercent: nextSoc,
+      rangeKm: rangeKmFromSoc(nextSoc),
       odometerKm: vehicle.odometerKm + odoDelta,
     );
+  }
+
+  static VehicleModel _withRangeFromSoc(VehicleModel vehicle) {
+    return vehicle.copyWith(rangeKm: rangeKmFromSoc(vehicle.socPercent));
   }
 
   @override

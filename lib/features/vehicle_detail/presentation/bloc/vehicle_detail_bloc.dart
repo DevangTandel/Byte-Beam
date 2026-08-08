@@ -1,6 +1,4 @@
 import 'dart:async';
-
-import 'package:bloc/bloc.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/alerts/domain/rules/alert_engine.dart';
@@ -9,6 +7,7 @@ import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
 import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// UI-ready bounds for SOC (aligned with low-battery alert threshold).
 const kSocBounds = ThresholdBounds(
@@ -18,7 +17,7 @@ const kSocBounds = ThresholdBounds(
 
 /// UI-ready bounds for battery temperature (°C).
 const kBatteryTempBounds = ThresholdBounds(
-  min: -20,
+  min: 0,
   max: kBatteryOverheatingThreshold,
 );
 
@@ -112,13 +111,10 @@ class VehicleDetailBloc extends Bloc<VehicleDetailEvent, VehicleDetailState> {
   /// Creates a [VehicleDetailBloc] for [vin].
   VehicleDetailBloc({
     required this.vin,
-    required FleetRepository repository,
-    required AlertsCubit alertsCubit,
-    required Clock clock,
-  })  : _repository = repository,
-        _alertsCubit = alertsCubit,
-        _clock = clock,
-        super(const VehicleDetailInitial()) {
+    required this._repository,
+    required this._alertsCubit,
+    required this._clock,
+  }) : super(const VehicleDetailInitial()) {
     on<VehicleDetailStarted>(_onStarted);
     on<_DetailUpdated>(_onDetailUpdated);
   }
@@ -196,8 +192,11 @@ class VehicleDetailBloc extends Bloc<VehicleDetailEvent, VehicleDetailState> {
       soc: evaluateStaleness(vehicle.soc, kSocBounds, _clock),
       range: evaluateStaleness(vehicle.range, kRangeBounds, _clock),
       speed: evaluateStaleness(vehicle.speed, kSpeedBounds, _clock),
-      batteryTemp:
-          evaluateStaleness(vehicle.batteryTemp, kBatteryTempBounds, _clock),
+      batteryTemp: evaluateStaleness(
+        vehicle.batteryTemp,
+        kBatteryTempBounds,
+        _clock,
+      ),
       odometer: evaluateStaleness(vehicle.odometer, kOdometerBounds, _clock),
     );
   }

@@ -59,14 +59,15 @@ void main() {
       );
 
       expect(find.text('36 °C'), findsOneWidget);
-      expect(find.text('data 7m old'), findsOneWidget);
+      expect(find.text('data 7 min old'), findsOneWidget);
 
       final styles = AppTheme.light().extension<VerdictTheme>()!;
       final valueStyle = tester.widget<Text>(find.text('36 °C')).style;
       expect(valueStyle?.color, styles.staleValueColor);
       expect(valueStyle?.fontWeight, FontWeight.w700);
 
-      final captionStyle = tester.widget<Text>(find.text('data 7m old')).style;
+      final captionStyle =
+          tester.widget<Text>(find.text('data 7 min old')).style;
       expect(captionStyle?.color, styles.staleCaptionColor);
       expect(
         find.descendant(

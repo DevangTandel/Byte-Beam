@@ -62,15 +62,13 @@ class AlertsState {
 class AlertsCubit extends Cubit<AlertsState> {
   /// Creates an [AlertsCubit].
   ///
-  /// [persistence] is accepted for DI / testing but session dismissals are
+  /// [_persistence] is accepted for DI / testing but session dismissals are
   /// in-memory only — this cubit never reads or writes it.
   AlertsCubit({
     required Stream<List<Vehicle>> vehicleStream,
-    required Clock clock,
-    required AlertPersistence persistence,
-  })  : _clock = clock,
-        _persistence = persistence,
-        super(const AlertsState()) {
+    required this._clock,
+    required this._persistence,
+  }) : super(const AlertsState()) {
     _subscription = vehicleStream.listen(_onVehicles);
   }
 
@@ -217,8 +215,7 @@ class AlertsCubit extends Cubit<AlertsState> {
     );
   }
 
-  String _mintId(Alert alert) =>
-      '${alert.vin}-${alert.kind.name}-${_idSeq++}';
+  String _mintId(Alert alert) => '${alert.vin}-${alert.kind.name}-${_idSeq++}';
 
   @override
   Future<void> close() async {

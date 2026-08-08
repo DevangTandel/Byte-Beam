@@ -95,7 +95,7 @@ class VerdictTheme extends ThemeExtension<VerdictTheme> {
   /// Grey pill background when [Verdict.stale].
   final Color stalePillColor;
 
-  /// "data Xm old" caption when [Verdict.stale].
+  /// "data X min old" caption when [Verdict.stale].
   final Color staleCaptionColor;
 
   /// Em-dash color when value is missing.

@@ -38,8 +38,11 @@ Verdict? evaluateStaleness(
     return null;
   }
 
+  // Floor age to whole seconds (honesty: never round up), same as [Reading.age].
   final ping = reading.lastPingAt;
-  final age = ping == null ? Duration.zero : clock.now().difference(ping);
+  final age = ping == null
+      ? Duration.zero
+      : Duration(seconds: clock.now().difference(ping).inSeconds);
   if (age > kStaleThreshold) {
     return Verdict.stale;
   }

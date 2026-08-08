@@ -110,7 +110,8 @@ void main() {
         expect(reading.isStale, isFalse);
       });
 
-      test('is true when age is exactly 5 minutes 0 seconds', () {
+      test('is false when age is exactly 5 minutes 0 seconds '
+          '(stale means older than 5 min, not ≥)', () {
         final clock = FakeClock(lastPingAt.add(kStaleThreshold));
         final reading = Reading<int>(
           clock: clock,
@@ -119,6 +120,19 @@ void main() {
         );
 
         expect(reading.age, kStaleThreshold);
+        expect(reading.isStale, isFalse);
+      });
+
+      test('is true when age is 5 minutes 1 second', () {
+        final clock = FakeClock(
+          lastPingAt.add(const Duration(minutes: 5, seconds: 1)),
+        );
+        final reading = Reading<int>(
+          clock: clock,
+          value: 78,
+          lastPingAt: lastPingAt,
+        );
+
         expect(reading.isStale, isTrue);
       });
 

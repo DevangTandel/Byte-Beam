@@ -1,4 +1,5 @@
 import 'package:byte_beam/core/clock/clock.dart';
+import 'package:byte_beam/core/theme/app_theme.dart';
 import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
 import 'package:byte_beam/core/widgets/verdict_pill.dart';
@@ -45,7 +46,10 @@ class VehicleDetailPage extends StatelessWidget {
           }
 
           final vehicle = state.vehicle;
-          final lastPingAge = clock.now().difference(vehicle.lastPingAt);
+          // Floor to whole seconds — ages never round up.
+          final lastPingAge = Duration(
+            seconds: clock.now().difference(vehicle.lastPingAt).inSeconds,
+          );
           final lastPingVerdict = lastPingAge > kStaleThreshold
               ? Verdict.stale
               : Verdict.normal;
@@ -149,6 +153,7 @@ class VehicleDetailPage extends StatelessWidget {
                           value: vehicle.soc.value,
                           unit: '%',
                           age: vehicle.soc.age,
+                          fractionDigits: 2,
                         ),
                       ),
                     ),
@@ -162,6 +167,7 @@ class VehicleDetailPage extends StatelessWidget {
                           value: vehicle.range.value,
                           unit: 'km',
                           age: vehicle.range.age,
+                          fractionDigits: 2,
                         ),
                       ),
                     ),
@@ -309,6 +315,7 @@ class _AlertTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final alertTheme = Theme.of(context).extension<AlertBadgeTheme>()!;
     final title = switch (alert.kind) {
       AlertKind.lowBattery => 'Low battery',
       AlertKind.batteryOverheating => 'Battery overheating',
@@ -319,8 +326,17 @@ class _AlertTile extends StatelessWidget {
       backgroundColor: colorScheme.surface,
       cornerRadius: 16,
       child: ListTile(
+        leading: Icon(
+          Icons.warning_rounded,
+          size: 24,
+          color: alertTheme.foregroundFor(alert.severity),
+        ),
         title: Text(title),
-        subtitle: Text(alert.severity.name),
+        subtitle: Text(
+          alert.isBasedOnStaleData
+              ? '${alert.severity.name.toUpperCase()} · based on old data'
+              : alert.severity.name.toUpperCase(),
+        ),
         trailing: TextButton(
           onPressed: onDismiss,
           child: const Text('Dismiss'),

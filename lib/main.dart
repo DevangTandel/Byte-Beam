@@ -27,6 +27,7 @@ class ByteBeamApp extends StatelessWidget {
         BlocProvider<AlertsCubit>.value(value: sl<AlertsCubit>()),
       ],
       child: MaterialApp.router(
+        debugShowCheckedModeBanner: false,
         title: 'ByteBeam',
         theme: AppTheme.light(),
         routerConfig: router,

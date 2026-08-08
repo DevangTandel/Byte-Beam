@@ -66,7 +66,7 @@ class VerdictPill extends StatelessWidget {
       children: [
         valueText,
         Text(
-          'data ${age.inMinutes}m old',
+          'data ${age.inMinutes} min old',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: theme.staleCaptionColor,
               ),

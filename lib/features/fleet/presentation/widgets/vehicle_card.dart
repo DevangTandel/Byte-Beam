@@ -1,6 +1,8 @@
 import 'package:byte_beam/core/theme/app_theme.dart';
+import 'package:byte_beam/core/widgets/alert_badge.dart';
 import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
+import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +13,8 @@ class VehicleCard extends StatelessWidget {
   const VehicleCard({
     required this.vehicle,
     required this.status,
+    this.alertCount = 0,
+    this.alertSeverity,
     this.onTap,
     super.key,
   });
@@ -21,6 +25,12 @@ class VehicleCard extends StatelessWidget {
   /// Precomputed operational status (no logic in the widget).
   final VehicleStatus status;
 
+  /// Active alert count for this vehicle (badge hidden when 0).
+  final int alertCount;
+
+  /// Severity used to color [AlertBadge] when [alertCount] > 0.
+  final AlertSeverity? alertSeverity;
+
   /// Optional tap handler (e.g. navigate to detail).
   final VoidCallback? onTap;
 
@@ -30,6 +40,7 @@ class VehicleCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final verdictTheme = Theme.of(context).extension<VerdictTheme>()!;
     final soc = vehicle.soc.value;
+    final showBadge = alertCount > 0 && alertSeverity != null;
 
     return OutlinedCard(
       color: colorScheme.outlineVariant,
@@ -70,6 +81,13 @@ class VehicleCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
+                  if (showBadge) ...[
+                    AlertBadge(
+                      count: alertCount,
+                      severity: alertSeverity,
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   StatusChip(status: status),
                 ],
               ),

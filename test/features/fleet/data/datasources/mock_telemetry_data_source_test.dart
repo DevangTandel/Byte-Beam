@@ -35,7 +35,8 @@ List<VehicleModel> loadSeedFleet() {
 /// For each vehicle with `speedKmh > 0` (moving), excluding frozen offline
 /// vehicles (`lastPingSecondsAgo >= 600`, i.e. VIN0007):
 ///   - `socDelta = 1.0 + (random.nextDouble() * 0.2 - 0.1)`  // ≈ 1 ± 0.1
-///   - `socPercent -= socDelta`
+///   - `socPercent -= socDelta` (battery % only decreases)
+///   - `rangeKm = socPercent / 100 * 532` (full pack = 532 km)
 ///   - `odometerKm += speedKmh * (3 / 3600)`                 // exact km in 3s
 ///
 /// Offline vehicles are emitted unchanged: no soc/odo/lastPing mutation and
@@ -50,6 +51,8 @@ void main() {
 
   // Exact first-tick values produced by Random(42) under the contract above.
   const expectedVin0003SocAfterTick1 = 15.979170405492775;
+  const expectedVin0003RangeAfterTick1 =
+      expectedVin0003SocAfterTick1 / 100 * kFullBatteryRangeKm;
   const expectedVin0001OdoAfterTick1 = 45210.035;
   const expectedVin0003OdoAfterTick1 = 12780.031666666666;
   const expectedVin0005OdoAfterTick1 = 67002.01;
@@ -91,13 +94,14 @@ void main() {
         final vin0003Seed = initial[2];
         expect(vin0003Seed.vin, 'VIN0003');
         expect(vin0003Seed.socPercent, 17);
+        expect(vin0003Seed.rangeKm, rangeKmFromSoc(17));
         expect(vin0003Seed.speedKmh, 38);
 
         // Snapshot VIN0007 (offline) from the seed emission — must never drift.
         final vin0007Seed = initial.singleWhere((v) => v.vin == 'VIN0007');
         expect(vin0007Seed.lastPingSecondsAgo, 720);
         expect(vin0007Seed.socPercent, 8);
-        expect(vin0007Seed.rangeKm, 15);
+        expect(vin0007Seed.rangeKm, rangeKmFromSoc(8));
         expect(vin0007Seed.odometerKm, 91004);
         expect(vin0007Seed.speedKmh, 0);
         expect(vin0007Seed.batteryTempC, 36);
@@ -120,6 +124,16 @@ void main() {
         expect(
           vin0003Seed.socPercent! - vin0003Tick1.socPercent!,
           closeTo(1.0208295945072243, 1e-12),
+        );
+        expect(
+          vin0003Tick1.rangeKm,
+          expectedVin0003RangeAfterTick1,
+          reason: 'range tracks SOC at 532 km / 100%',
+        );
+        expect(
+          vin0003Tick1.socPercent!,
+          lessThan(vin0003Seed.socPercent!),
+          reason: 'battery % must decrease on each moving tick',
         );
         expect(vin0003Tick1.odometerKm, expectedVin0003OdoAfterTick1);
 
