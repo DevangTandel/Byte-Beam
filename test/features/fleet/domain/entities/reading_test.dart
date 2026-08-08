@@ -4,23 +4,23 @@ import 'package:flutter_test/flutter_test.dart';
 
 /// Test-only clock with a fixed [now] value.
 class FakeClock implements Clock {
-  FakeClock(this._now);
+  FakeClock(this._fixed);
 
-  DateTime _now;
-
-  set now(DateTime value) => _now = value;
+  DateTime _fixed;
 
   @override
-  DateTime now() => _now;
+  DateTime now() => _fixed;
+
+  void advance(Duration d) => _fixed = _fixed.add(d);
 }
 
 void main() {
-  const lastPingAt = DateTime(2026, 8, 7, 12, 0, 0);
+  final lastPingAt = DateTime(2026, 8, 7, 12, 0, 0);
 
   group('Reading', () {
     group('fields', () {
       test('exposes nullable value', () {
-        const reading = Reading<int>(
+        final reading = Reading<int>(
           clock: _FixedClock(lastPingAt),
           value: 78,
           lastPingAt: lastPingAt,
@@ -30,7 +30,7 @@ void main() {
       });
 
       test('exposes nullable lastPingAt', () {
-        const reading = Reading<int>(
+        final reading = Reading<int>(
           clock: _FixedClock(lastPingAt),
           value: 78,
           lastPingAt: lastPingAt,
@@ -40,7 +40,7 @@ void main() {
       });
 
       test('allows null value and null lastPingAt', () {
-        const reading = Reading<int>(
+        final reading = Reading<int>(
           clock: _FixedClock(lastPingAt),
         );
 
@@ -77,7 +77,7 @@ void main() {
 
     group('isMissing', () {
       test('is true when value is null', () {
-        const reading = Reading<int>(
+        final reading = Reading<int>(
           clock: _FixedClock(lastPingAt),
           lastPingAt: lastPingAt,
         );
@@ -86,7 +86,7 @@ void main() {
       });
 
       test('is false when value is non-null', () {
-        const reading = Reading<int>(
+        final reading = Reading<int>(
           clock: _FixedClock(lastPingAt),
           value: 42,
           lastPingAt: lastPingAt,
