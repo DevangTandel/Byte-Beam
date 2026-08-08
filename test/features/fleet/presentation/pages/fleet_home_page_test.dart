@@ -117,8 +117,16 @@ void main() {
     );
   });
 
+  /// Tall surface so [ListView.builder] materializes all test fleet cards.
+  Future<void> setTallSurface(WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 2000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+  }
+
   group('FleetHomePage', () {
-    testWidgets('renders 8 vehicle cards from a loaded state', (tester) async {
+    testWidgets('renders fleet cards in a ListView.builder', (tester) async {
+      await setTallSurface(tester);
+
       const counts = FleetStatusCounts(
         all: 8,
         moving: 3,
@@ -141,11 +149,18 @@ void main() {
       await tester.pumpWidget(pumpPage());
       await tester.pump();
 
-      expect(find.byType(VehicleCard), findsNWidgets(8));
+      final listView = find.byType(ListView);
+      expect(listView, findsOneWidget);
+      expect(
+        find.descendant(of: listView, matching: find.byType(VehicleCard)),
+        findsNWidgets(8),
+      );
       expect(find.byType(EmptyState), findsNothing);
       expect(find.text('REG-VIN0001'), findsOneWidget);
       expect(find.text('REG-VIN0008'), findsOneWidget);
       expect(find.byType(AlertBadge), findsNothing);
+      expect(find.byKey(const ValueKey<String>('VIN0001')), findsOneWidget);
+      expect(find.byKey(const ValueKey<String>('VIN0008')), findsOneWidget);
     });
 
     testWidgets(
@@ -235,6 +250,8 @@ void main() {
     testWidgets(
       'shows AlertBadge from AlertsState.badgeSummaryFor',
       (tester) async {
+        await setTallSurface(tester);
+
         final loaded = FleetLoaded(
           items: eightItems(),
           filter: FleetFilter.all,
@@ -321,6 +338,8 @@ void main() {
     testWidgets(
       'selecting a filter with zero results shows EmptyState, not a blank list',
       (tester) async {
+        await setTallSurface(tester);
+
         const counts = FleetStatusCounts(
           all: 8,
           moving: 3,
@@ -350,6 +369,7 @@ void main() {
 
         await tester.pumpWidget(pumpPage());
         await tester.pump();
+        expect(find.byType(ListView), findsOneWidget);
         expect(find.byType(VehicleCard), findsNWidgets(8));
         expect(find.byType(EmptyState), findsNothing);
 
@@ -365,6 +385,7 @@ void main() {
         await tester.pump();
 
         expect(find.byType(EmptyState), findsOneWidget);
+        expect(find.byType(ListView), findsNothing);
         expect(find.byType(VehicleCard), findsNothing);
         expect(find.textContaining('No vehicles'), findsOneWidget);
       },

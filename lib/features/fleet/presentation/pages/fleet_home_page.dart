@@ -54,15 +54,18 @@ class FleetHomePage extends StatelessWidget {
                           ? const EmptyState(
                               title: 'No vehicles',
                               message:
-                                  '''Nothing matches this filter. Try another status.''',
+                                  'Nothing matches this filter. Try another status.',
                             )
-                          : SingleChildScrollView(
-                              child: Column(
-                                children: [
-                                  for (final item in fleetState.items)
-                                    _vehicleCard(context, item, alertsState),
-                                ],
-                              ),
+                          : ListView.builder(
+                              itemCount: fleetState.items.length,
+                              itemBuilder: (context, index) {
+                                final item = fleetState.items[index];
+                                return _vehicleCard(
+                                  context,
+                                  item,
+                                  alertsState,
+                                );
+                              },
                             ),
                     ),
                   ],
@@ -82,6 +85,7 @@ class FleetHomePage extends StatelessWidget {
   ) {
     final badge = alertsState.badgeSummaryFor(item.vehicle.vin);
     return VehicleCard(
+      key: ValueKey<String>(item.vehicle.vin),
       vehicle: item.vehicle,
       status: item.status,
       socVerdict: item.socVerdict,
