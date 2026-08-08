@@ -1,1 +1,1 @@
-// Configures GetIt service locator and dependency registration.
+export 'package:byte_beam/core/di/injection_container.dart';
