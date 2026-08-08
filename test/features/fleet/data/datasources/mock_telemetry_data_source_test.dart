@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:math';
 
 import 'package:byte_beam/core/clock/clock.dart';
+import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
+import 'package:byte_beam/features/alerts/domain/rules/alert_engine.dart';
 import 'package:byte_beam/features/fleet/data/datasources/mock_telemetry_data_source.dart';
 import 'package:byte_beam/features/fleet/data/models/vehicle_model.dart';
 import 'package:fake_async/fake_async.dart';
@@ -195,10 +197,21 @@ void main() {
         expect(vin0004Tick1.speedKmh, 0);
         expect(vin0004Tick1.odometerKm, vin0004Seed.odometerKm);
 
+        // VIN0006: seed rangeKm null must survive mock normalize + idle ticks.
+        final vin0006Seed = initial.singleWhere((v) => v.vin == 'VIN0006');
+        expect(vin0006Seed.socPercent, 44);
+        expect(vin0006Seed.rangeKm, isNull);
+        expect(vin0006Seed.batteryTempC, isNull);
+        final vin0006Tick1 = tick1.singleWhere((v) => v.vin == 'VIN0006');
+        expect(vin0006Tick1.rangeKm, isNull);
+        expect(vin0006Tick1.batteryTempC, isNull);
+        expect(vin0006Tick1.lastPingSecondsAgo, 0);
+
         final vin0008Seed = initial.singleWhere((v) => v.vin == 'VIN0008');
         final vin0008Tick1 = tick1.singleWhere((v) => v.vin == 'VIN0008');
         expect(vin0008Tick1.lastPingSecondsAgo, 0);
         expect(vin0008Tick1.socPercent, isNull);
+        expect(vin0008Tick1.rangeKm, isNull);
         expect(vin0008Tick1.odometerKm, vin0008Seed.odometerKm);
 
         // --- tick 2 @ +6s ---
@@ -272,6 +285,73 @@ void main() {
         source.dispose();
       });
     });
+
+    test(
+      'VIN0003 drains ~1%/tick live: already <20% warning, then escalates '
+      'to CRITICAL below 10% on the same alert id',
+      () {
+        fakeAsync((async) {
+          final clock = FakeClock(launchAt);
+          final source = MockTelemetryDataSource(
+            clock: clock,
+            seed: loadSeedFleet(),
+            random: Random(42),
+          );
+
+          final emissions = <List<VehicleModel>>[];
+          final sub = source.watchFleet().listen(emissions.add);
+          async.flushMicrotasks();
+
+          var previous = <Alert>[];
+          var sawWarning = false;
+          String? alertId;
+          var sawCritical = false;
+
+          for (var tick = 0; tick < 25; tick++) {
+            final model =
+                emissions.last.singleWhere((v) => v.vin == 'VIN0003');
+            final vehicle = model.toDomain(clock);
+            final alerts = evaluateAlerts(vehicle, previous, clock);
+            previous = alerts;
+
+            final lowBattery = alerts.where(
+              (a) => a.kind == AlertKind.lowBattery,
+            );
+            if (lowBattery.isEmpty) {
+              async.elapse(kTelemetryTick);
+              continue;
+            }
+
+            final alert = lowBattery.single;
+            alertId ??= alert.id;
+            expect(alert.id, alertId, reason: 'same alert escalates in place');
+
+            if (alert.severity == AlertSeverity.warning) {
+              sawWarning = true;
+              expect(model.socPercent, lessThan(20));
+              expect(model.socPercent, greaterThanOrEqualTo(10));
+            }
+            if (alert.severity == AlertSeverity.critical) {
+              sawCritical = true;
+              expect(model.socPercent, lessThan(10));
+              break;
+            }
+
+            async.elapse(kTelemetryTick);
+          }
+
+          expect(sawWarning, isTrue, reason: 'VIN0003 seed 17% is <20%');
+          expect(
+            sawCritical,
+            isTrue,
+            reason: 'live ticks must drain VIN0003 SOC below 10%',
+          );
+
+          sub.cancel();
+          source.dispose();
+        });
+      },
+    );
 
     test('after dispose(), no further emissions even when fake time advances',
         () {

@@ -210,6 +210,39 @@ void main() {
     );
 
     blocTest<VehicleDetailBloc, VehicleDetailState>(
+      'mixed thresholds: ping age 6 min is STALE but not OFFLINE '
+      '(5 min stale vs 10 min offline are independent)',
+      build: buildBloc,
+      act: (bloc) async {
+        bloc.add(const VehicleDetailStarted());
+        // 5 min < age < 10 min: readings stale, vehicle still online/stopped.
+        final mixed = buildVehicle(
+          vehicleVin: vin,
+          soc: 8,
+          batteryTemp: 99,
+          readingAge: const Duration(minutes: 6),
+          speed: 0,
+          ignitionOn: false,
+        );
+        alertsVehicleController.add([mixed]);
+        await pumpEventQueue();
+        fleetController.add([mixed]);
+        await pumpEventQueue();
+      },
+      expect: () => [
+        isA<VehicleDetailLoaded>()
+            .having((s) => s.status, 'not offline', isNot(VehicleStatus.offline))
+            .having((s) => s.status, 'stopped', VehicleStatus.stopped)
+            .having((s) => s.verdicts.soc, 'soc stale', Verdict.stale)
+            .having(
+              (s) => s.verdicts.batteryTemp,
+              'temp stale (not alert despite 99C)',
+              Verdict.stale,
+            ),
+      ],
+    );
+
+    blocTest<VehicleDetailBloc, VehicleDetailState>(
       'exposes only alerts for the detail vin from AlertsCubit',
       build: buildBloc,
       act: (bloc) async {

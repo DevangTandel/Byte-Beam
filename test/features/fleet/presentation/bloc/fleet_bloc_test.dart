@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/fleet/data/models/vehicle_model.dart';
+import 'package:byte_beam/features/fleet/domain/entities/reading.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
@@ -96,7 +99,7 @@ List<Vehicle> seedFleet(Clock launchClock) {
       reg: 'KA 02 KL 2468',
       model: 'eVan 30',
       socPercent: 44,
-      rangeKm: 234.08,
+      rangeKm: null,
       speedKmh: 0,
       ignitionOn: false,
       batteryTempC: null,
@@ -142,7 +145,7 @@ const seedCounts = FleetStatusCounts(
 );
 
 void main() {
-  final launchAt = DateTime(2026, 8, 7, 12, 0, 0);
+  final launchAt = DateTime(2026, 8, 7, 12);
 
   late MockFleetRepository mockRepository;
   late FakeClock clock;
@@ -285,5 +288,81 @@ void main() {
             .having((s) => s.counts.idle, 'idle count', 0),
       ],
     );
+
+    test(
+      'live status counts update when the fleet stream ticks with a new mix '
+      '(not frozen at initial load)',
+      () async {
+        final fleetStream = StreamController<List<Vehicle>>();
+        addTearDown(() async {
+          await fleetStream.close();
+        });
+        when(mockRepository.watchFleet()).thenAnswer((_) => fleetStream.stream);
+
+        final bloc = buildBloc();
+        addTearDown(bloc.close);
+
+        final states = <FleetState>[];
+        final sub = bloc.stream.listen(states.add);
+        addTearDown(sub.cancel);
+
+        bloc.add(const FleetStarted());
+        fleetStream.add(fleet);
+        await pumpEventQueue();
+
+        expect(states, hasLength(1));
+        expect((states.single as FleetLoaded).counts, seedCounts);
+
+        // Second tick: VIN0001 stops (was moving) → moving 3→2, stopped 3→4.
+        final stoppedVin0001 = _withSpeedAndIgnition(
+          fleet.singleWhere((v) => v.vin == 'VIN0001'),
+          clock: clock,
+          speed: 0,
+          ignitionOn: false,
+        );
+        fleetStream.add([
+          for (final vehicle in fleet)
+            if (vehicle.vin == 'VIN0001') stoppedVin0001 else vehicle,
+        ]);
+        await pumpEventQueue();
+
+        expect(states, hasLength(2));
+        expect(
+          (states.last as FleetLoaded).counts,
+          const FleetStatusCounts(
+            all: 8,
+            moving: 2,
+            idle: 1,
+            stopped: 4,
+            offline: 1,
+          ),
+        );
+      },
+    );
   });
+}
+
+/// Copies [vehicle] with a fresh speed reading and ignition (for status ticks).
+Vehicle _withSpeedAndIgnition(
+  Vehicle vehicle, {
+  required Clock clock,
+  required double speed,
+  required bool ignitionOn,
+}) {
+  return Vehicle(
+    vin: vehicle.vin,
+    reg: vehicle.reg,
+    model: vehicle.model,
+    soc: vehicle.soc,
+    range: vehicle.range,
+    speed: Reading<double>(
+      clock: clock,
+      value: speed,
+      lastPingAt: vehicle.lastPingAt,
+    ),
+    batteryTemp: vehicle.batteryTemp,
+    odometer: vehicle.odometer,
+    lastPingAt: vehicle.lastPingAt,
+    ignitionOn: ignitionOn,
+  );
 }

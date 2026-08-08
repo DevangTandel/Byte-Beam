@@ -214,6 +214,172 @@ void main() {
     );
 
     testWidgets(
+      'last ping age 4:59 floors to "4 m ago" not "5 m ago"',
+      (tester) async {
+        final pingAge = const Duration(minutes: 4, seconds: 59);
+        Reading<double> reading(double? value) => Reading<double>(
+              clock: clock,
+              value: value,
+              lastPingAt: now.subtract(pingAge),
+            );
+
+        final vehicle = Vehicle(
+          vin: vin,
+          reg: 'MH 12 EF 9012',
+          model: 'eVan 30',
+          soc: reading(50),
+          range: reading(100),
+          speed: reading(0),
+          batteryTemp: reading(30),
+          odometer: reading(1000),
+          lastPingAt: now.subtract(pingAge),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.normal,
+              range: Verdict.normal,
+              speed: Verdict.normal,
+              batteryTemp: Verdict.normal,
+              odometer: Verdict.normal,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        expect(find.text('4 m ago'), findsOneWidget);
+        expect(find.text('5 m ago'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'mixed UI: StatusChip not Offline while SOC pill is STALE grey '
+      '(6 min ping: stale but online)',
+      (tester) async {
+        final pingAge = const Duration(minutes: 6);
+        Reading<double> reading(double? value) => Reading<double>(
+              clock: clock,
+              value: value,
+              lastPingAt: now.subtract(pingAge),
+            );
+
+        final vehicle = Vehicle(
+          vin: vin,
+          reg: 'MH 12 EF 9012',
+          model: 'eVan 30',
+          soc: reading(8),
+          range: reading(15),
+          speed: reading(0),
+          batteryTemp: reading(30),
+          odometer: reading(1000),
+          lastPingAt: now.subtract(pingAge),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.stale,
+              range: Verdict.stale,
+              speed: Verdict.stale,
+              batteryTemp: Verdict.stale,
+              odometer: Verdict.stale,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final styles = AppTheme.light().extension<VerdictTheme>()!;
+        expect(find.text('Stopped'), findsOneWidget);
+        expect(find.text('Offline'), findsNothing);
+        expect(find.text('8.00 %'), findsOneWidget);
+        expect(
+          tester.widget<Text>(find.text('8.00 %')).style?.color,
+          styles.staleValueColor,
+        );
+        expect(find.text('data 6 min old'), findsWidgets);
+      },
+    );
+
+    testWidgets(
+      'VIN0006 null range and batteryTemp render dash "—" with no verdict',
+      (tester) async {
+        const vin0006 = 'VIN0006';
+        when(() => mockDetailBloc.vin).thenReturn(vin0006);
+
+        Reading<double> reading(double? value) => Reading<double>(
+              clock: clock,
+              value: value,
+              lastPingAt: now.subtract(const Duration(minutes: 1)),
+            );
+
+        final vehicle = Vehicle(
+          vin: vin0006,
+          reg: 'KA 02 KL 2468',
+          model: 'eVan 30',
+          soc: reading(44),
+          range: reading(null),
+          speed: reading(0),
+          batteryTemp: reading(null),
+          odometer: reading(55890),
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+          ignitionOn: false,
+        );
+
+        whenListen(
+          mockDetailBloc,
+          const Stream<VehicleDetailState>.empty(),
+          initialState: VehicleDetailLoaded(
+            vehicle: vehicle,
+            status: VehicleStatus.stopped,
+            verdicts: const ParameterVerdicts(
+              soc: Verdict.normal,
+              range: null,
+              speed: Verdict.normal,
+              batteryTemp: null,
+              odometer: Verdict.normal,
+            ),
+            alerts: const [],
+          ),
+        );
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        final rangePill = tester.widget<VerdictPill>(
+          find.byKey(const Key('reading-range')),
+        );
+        final tempPill = tester.widget<VerdictPill>(
+          find.byKey(const Key('reading-batteryTemp')),
+        );
+
+        expect(vehicle.vin, vin0006);
+        expect(rangePill.value, isNull);
+        expect(rangePill.verdict, isNull);
+        expect(tempPill.value, isNull);
+        expect(tempPill.verdict, isNull);
+        expect(find.text('—'), findsNWidgets(2));
+        expect(find.textContaining('old'), findsNothing);
+      },
+    );
+
+    testWidgets(
       'VIN0007 SOC 8% renders STALE grey, not ALERT red '
       '(staleness overrides critical SOC breach)',
       (tester) async {

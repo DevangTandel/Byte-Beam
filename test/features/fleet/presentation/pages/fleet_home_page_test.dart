@@ -128,6 +128,53 @@ void main() {
     });
 
     testWidgets(
+      'filter chip counts update when FleetBloc emits a new status mix',
+      (tester) async {
+        final vehicles = eightVehicles();
+        final initial = FleetLoaded(
+          vehicles: vehicles,
+          filter: FleetFilter.all,
+          counts: const FleetStatusCounts(
+            all: 8,
+            moving: 3,
+            idle: 1,
+            stopped: 4,
+            offline: 0,
+          ),
+        );
+        final afterTick = FleetLoaded(
+          vehicles: vehicles,
+          filter: FleetFilter.all,
+          counts: const FleetStatusCounts(
+            all: 8,
+            moving: 2,
+            idle: 1,
+            stopped: 5,
+            offline: 0,
+          ),
+        );
+
+        final states = StreamController<FleetState>.broadcast(sync: true);
+        addTearDown(states.close);
+
+        whenListen(mockBloc, states.stream, initialState: initial);
+
+        await tester.pumpWidget(pumpPage());
+        await tester.pump();
+
+        expect(find.text('Moving (3)'), findsOneWidget);
+        expect(find.text('Stopped (4)'), findsOneWidget);
+
+        states.add(afterTick);
+        await tester.pump();
+
+        expect(find.text('Moving (3)'), findsNothing);
+        expect(find.text('Moving (2)'), findsOneWidget);
+        expect(find.text('Stopped (5)'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
       'shows AlertBadge on vehicle cards that have active alerts',
       (tester) async {
         final vehicles = eightVehicles();

@@ -37,10 +37,10 @@ class MockTelemetryDataSource implements TelemetryDataSource {
     required this.clock,
     required List<VehicleModel> seed,
     Random? random,
-  })  : _random = random ?? Random(42),
-        _fleet = [
-          for (final vehicle in seed) _withRangeFromSoc(vehicle),
-        ];
+  }) : _random = random ?? Random(42),
+       _fleet = [
+         for (final vehicle in seed) _withRangeFromSoc(vehicle),
+       ];
 
   /// App-launch / wall clock used by callers mapping to domain.
   final Clock clock;
@@ -109,8 +109,7 @@ class MockTelemetryDataSource implements TelemetryDataSource {
         _random.nextDouble() * (kSpeedJitterKmh * 2) - kSpeedJitterKmh;
     final odoDelta = vehicle.speedKmh * (kTelemetryTick.inSeconds / 3600);
     // Stay moving: clamp away from zero so status does not flip to stopped.
-    final nextSpeed =
-        (vehicle.speedKmh + speedJitter).clamp(1.0, 120.0).toDouble();
+    final nextSpeed = (vehicle.speedKmh + speedJitter).clamp(1.0, 120.0);
 
     final soc = vehicle.socPercent;
     if (soc == null) {
@@ -122,17 +121,26 @@ class MockTelemetryDataSource implements TelemetryDataSource {
     }
 
     // Battery % only decreases tick-over-tick for moving vehicles.
-    final nextSoc = (soc - socDelta).clamp(0.0, 100.0).toDouble();
+    final nextSoc = (soc - socDelta).clamp(0.0, 100.0);
+    // Keep an explicit null range (seed honesty); otherwise track SOC.
+    final nextRange = vehicle.rangeKm == null ? null : rangeKmFromSoc(nextSoc);
     return vehicle.copyWith(
       socPercent: nextSoc,
-      rangeKm: rangeKmFromSoc(nextSoc),
+      rangeKm: nextRange,
       speedKmh: nextSpeed,
       odometerKm: vehicle.odometerKm + odoDelta,
       lastPingSecondsAgo: 0,
     );
   }
 
+  /// Aligns non-null seed ranges to the 532 km pack formula.
+  ///
+  /// Leaves `rangeKm: null` untouched so missing-range honesty cases
+  /// (e.g. VIN0006) survive into the domain/UI as a dash.
   static VehicleModel _withRangeFromSoc(VehicleModel vehicle) {
+    if (vehicle.rangeKm == null || vehicle.socPercent == null) {
+      return vehicle;
+    }
     return vehicle.copyWith(rangeKm: rangeKmFromSoc(vehicle.socPercent));
   }
 
