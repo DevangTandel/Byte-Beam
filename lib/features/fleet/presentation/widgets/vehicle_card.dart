@@ -112,6 +112,7 @@ class VehicleCard extends StatelessWidget {
                         value: vehicle.soc.value,
                         unit: '%',
                         age: vehicle.soc.age,
+                        fractionDigits: 2,
                       ),
                     ),
                   ),
@@ -125,6 +126,7 @@ class VehicleCard extends StatelessWidget {
                         value: vehicle.range.value,
                         unit: 'km',
                         age: vehicle.range.age,
+                        fractionDigits: 2,
                       ),
                     ),
                   ),
@@ -156,8 +158,8 @@ class _ReadingColumn extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
+            color: colorScheme.onSurfaceVariant,
+          ),
         ),
         const SizedBox(height: 4),
         pill,

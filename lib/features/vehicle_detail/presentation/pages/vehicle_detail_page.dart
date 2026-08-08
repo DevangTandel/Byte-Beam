@@ -185,6 +185,7 @@ class VehicleDetailPage extends StatelessWidget {
                           value: vehicle.speed.value,
                           unit: 'km/h',
                           age: vehicle.speed.age,
+                          fractionDigits: 0,
                         ),
                       ),
                     ),
