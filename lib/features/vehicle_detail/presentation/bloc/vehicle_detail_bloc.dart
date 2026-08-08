@@ -142,6 +142,9 @@ class VehicleDetailBloc extends Bloc<VehicleDetailEvent, VehicleDetailState> {
     await _alertsSubscription?.cancel();
 
     _fleetSubscription = _repository.watchFleet().listen((fleet) {
+      if (isClosed) {
+        return;
+      }
       Vehicle? match;
       for (final vehicle in fleet) {
         if (vehicle.vin == vin) {
@@ -154,11 +157,16 @@ class VehicleDetailBloc extends Bloc<VehicleDetailEvent, VehicleDetailState> {
     });
 
     _alertsSubscription = _alertsCubit.stream.listen((_) {
+      if (isClosed) {
+        return;
+      }
       add(const _DetailUpdated());
     });
 
     // Seed from current alerts state if a vehicle is already known.
-    add(const _DetailUpdated());
+    if (!isClosed) {
+      add(const _DetailUpdated());
+    }
   }
 
   void _onDetailUpdated(
@@ -196,8 +204,20 @@ class VehicleDetailBloc extends Bloc<VehicleDetailEvent, VehicleDetailState> {
 
   @override
   Future<void> close() async {
-    await _fleetSubscription?.cancel();
-    await _alertsSubscription?.cancel();
+    final fleetSub = _fleetSubscription;
+    final alertsSub = _alertsSubscription;
+    _fleetSubscription = null;
+    _alertsSubscription = null;
+
+    // Start both cancels before any await. BlocProvider does not await
+    // close(), so yielding between cancels left the alerts subscription
+    // live across telemetry ticks after pop.
+    final cancelFleet = fleetSub?.cancel();
+    final cancelAlerts = alertsSub?.cancel();
+    await Future.wait([
+      if (cancelFleet != null) cancelFleet,
+      if (cancelAlerts != null) cancelAlerts,
+    ]);
     return super.close();
   }
 }

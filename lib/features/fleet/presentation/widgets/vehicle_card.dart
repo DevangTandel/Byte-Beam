@@ -1,3 +1,5 @@
+import 'package:byte_beam/core/theme/app_theme.dart';
+import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
@@ -25,29 +27,86 @@ class VehicleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final verdictTheme = Theme.of(context).extension<VerdictTheme>()!;
     final soc = vehicle.soc.value;
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: ListTile(
+    return OutlinedCard(
+      color: colorScheme.outlineVariant,
+      backgroundColor: colorScheme.surface,
+      cornerRadius: 16,
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: InkWell(
         onTap: onTap,
-        title: Text(vehicle.reg, style: textTheme.titleMedium),
-        subtitle: Text(
-          '${vehicle.model} · ${vehicle.vin}',
-          style: textTheme.bodySmall,
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (soc != null) ...[
-              Text(
-                '${soc.round()}%',
-                style: textTheme.labelLarge,
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          vehicle.reg,
+                          style: textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onSurface,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${vehicle.model} · ${vehicle.vin}',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  StatusChip(status: status),
+                ],
               ),
-              const SizedBox(width: 8),
+              if (soc != null) ...[
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.battery_charging_full,
+                      size: 20,
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(999),
+                        child: LinearProgressIndicator(
+                          value: (soc.clamp(0, 100)) / 100,
+                          minHeight: 8,
+                          backgroundColor: colorScheme.surfaceContainerHighest,
+                          color: verdictTheme.normalValueColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${soc.round()}%',
+                      style: textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ],
-            StatusChip(status: status),
-          ],
+          ),
         ),
       ),
     );

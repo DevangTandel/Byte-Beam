@@ -222,8 +222,13 @@ class AlertsCubit extends Cubit<AlertsState> {
 
   @override
   Future<void> close() async {
-    await _subscription?.cancel();
+    // Cancel the undo timer before awaiting stream cancel so it cannot fire
+    // after close() yields (BlocProvider does not await close()).
     _undoTimer?.cancel();
+    _undoTimer = null;
+    final sub = _subscription;
+    _subscription = null;
+    await sub?.cancel();
     return super.close();
   }
 }

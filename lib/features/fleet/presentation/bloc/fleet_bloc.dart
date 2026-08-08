@@ -146,9 +146,12 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
     Emitter<FleetState> emit,
   ) async {
     await _subscription?.cancel();
-    _subscription = _repository.watchFleet().listen(
-      (vehicles) => add(_FleetUpdated(vehicles)),
-    );
+    _subscription = _repository.watchFleet().listen((vehicles) {
+      if (isClosed) {
+        return;
+      }
+      add(_FleetUpdated(vehicles));
+    });
   }
 
   void _onFleetUpdated(
@@ -225,7 +228,9 @@ class FleetBloc extends Bloc<FleetEvent, FleetState> {
 
   @override
   Future<void> close() async {
-    await _subscription?.cancel();
+    final sub = _subscription;
+    _subscription = null;
+    await sub?.cancel();
     return super.close();
   }
 }

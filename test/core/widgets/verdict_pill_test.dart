@@ -13,7 +13,9 @@ void main() {
   }
 
   group('VerdictPill', () {
-    testWidgets('normal: colored value, no age caption', (tester) async {
+    testWidgets('normal: bold colored value, no age caption, no fill', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(
           const VerdictPill(
@@ -32,18 +34,17 @@ void main() {
       final valueStyle = tester.widget<Text>(find.text('78 %')).style;
       final styles = AppTheme.light().extension<VerdictTheme>()!;
       expect(valueStyle?.color, styles.normalValueColor);
-
-      final pill = tester.widget<DecoratedBox>(
+      expect(valueStyle?.fontWeight, FontWeight.w700);
+      expect(
         find.descendant(
           of: find.byType(VerdictPill),
           matching: find.byType(DecoratedBox),
-        ).first,
+        ),
+        findsNothing,
       );
-      final decoration = pill.decoration! as BoxDecoration;
-      expect(decoration.color, styles.normalPillColor);
     });
 
-    testWidgets('stale: dimmed value, "data Xm old" caption, grey pill', (
+    testWidgets('stale: bold dimmed value, "data Xm old" caption, no fill', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -63,21 +64,36 @@ void main() {
       final styles = AppTheme.light().extension<VerdictTheme>()!;
       final valueStyle = tester.widget<Text>(find.text('36 °C')).style;
       expect(valueStyle?.color, styles.staleValueColor);
+      expect(valueStyle?.fontWeight, FontWeight.w700);
 
       final captionStyle = tester.widget<Text>(find.text('data 7m old')).style;
       expect(captionStyle?.color, styles.staleCaptionColor);
-
-      final pill = tester.widget<DecoratedBox>(
+      expect(
         find.descendant(
           of: find.byType(VerdictPill),
           matching: find.byType(DecoratedBox),
-        ).first,
+        ),
+        findsNothing,
       );
-      final decoration = pill.decoration! as BoxDecoration;
-      expect(decoration.color, styles.stalePillColor);
     });
 
-    testWidgets('null value: em dash only — no pill, no age text', (
+    testWidgets('fractionDigits: formats with fixed decimals', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const VerdictPill(
+            verdict: Verdict.normal,
+            value: 45211.8,
+            unit: 'km',
+            age: Duration.zero,
+            fractionDigits: 2,
+          ),
+        ),
+      );
+
+      expect(find.text('45211.80 km'), findsOneWidget);
+    });
+
+    testWidgets('null value: em dash only — no fill, no age text', (
       tester,
     ) async {
       await tester.pumpWidget(

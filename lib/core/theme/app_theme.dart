@@ -43,8 +43,19 @@ abstract final class AppTheme {
       unselectedBackground: Color(0xFFE9ECEF),
     );
 
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color.fromARGB(255, 2, 80, 111),
+      outline: const Color.fromARGB(255, 30, 51, 67),
+      surface: const Color.fromARGB(255, 255, 255, 255),
+    );
+    final textTheme = Typography.material2021().black.apply(
+      bodyColor: colorScheme.onSurface,
+      displayColor: colorScheme.onSurface,
+    );
+
     return ThemeData(
-      colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0B6E4F)),
+      colorScheme: colorScheme,
+      textTheme: textTheme,
       useMaterial3: true,
       extensions: const [verdict, statusChip, alertBadge, filterChipBar],
     );
@@ -137,16 +148,26 @@ class VerdictTheme extends ThemeExtension<VerdictTheme> {
       return this;
     }
     return VerdictTheme(
-      normalValueColor: Color.lerp(normalValueColor, other.normalValueColor, t)!,
+      normalValueColor: Color.lerp(
+        normalValueColor,
+        other.normalValueColor,
+        t,
+      )!,
       normalPillColor: Color.lerp(normalPillColor, other.normalPillColor, t)!,
       alertValueColor: Color.lerp(alertValueColor, other.alertValueColor, t)!,
       alertPillColor: Color.lerp(alertPillColor, other.alertPillColor, t)!,
       staleValueColor: Color.lerp(staleValueColor, other.staleValueColor, t)!,
       stalePillColor: Color.lerp(stalePillColor, other.stalePillColor, t)!,
-      staleCaptionColor:
-          Color.lerp(staleCaptionColor, other.staleCaptionColor, t)!,
-      missingValueColor:
-          Color.lerp(missingValueColor, other.missingValueColor, t)!,
+      staleCaptionColor: Color.lerp(
+        staleCaptionColor,
+        other.staleCaptionColor,
+        t,
+      )!,
+      missingValueColor: Color.lerp(
+        missingValueColor,
+        other.missingValueColor,
+        t,
+      )!,
     );
   }
 }
@@ -249,20 +270,38 @@ class StatusChipTheme extends ThemeExtension<StatusChipTheme> {
       return this;
     }
     return StatusChipTheme(
-      movingForeground:
-          Color.lerp(movingForeground, other.movingForeground, t)!,
-      movingBackground:
-          Color.lerp(movingBackground, other.movingBackground, t)!,
+      movingForeground: Color.lerp(
+        movingForeground,
+        other.movingForeground,
+        t,
+      )!,
+      movingBackground: Color.lerp(
+        movingBackground,
+        other.movingBackground,
+        t,
+      )!,
       idleForeground: Color.lerp(idleForeground, other.idleForeground, t)!,
       idleBackground: Color.lerp(idleBackground, other.idleBackground, t)!,
-      stoppedForeground:
-          Color.lerp(stoppedForeground, other.stoppedForeground, t)!,
-      stoppedBackground:
-          Color.lerp(stoppedBackground, other.stoppedBackground, t)!,
-      offlineForeground:
-          Color.lerp(offlineForeground, other.offlineForeground, t)!,
-      offlineBackground:
-          Color.lerp(offlineBackground, other.offlineBackground, t)!,
+      stoppedForeground: Color.lerp(
+        stoppedForeground,
+        other.stoppedForeground,
+        t,
+      )!,
+      stoppedBackground: Color.lerp(
+        stoppedBackground,
+        other.stoppedBackground,
+        t,
+      )!,
+      offlineForeground: Color.lerp(
+        offlineForeground,
+        other.offlineForeground,
+        t,
+      )!,
+      offlineBackground: Color.lerp(
+        offlineBackground,
+        other.offlineBackground,
+        t,
+      )!,
     );
   }
 }
@@ -327,14 +366,26 @@ class AlertBadgeTheme extends ThemeExtension<AlertBadgeTheme> {
       return this;
     }
     return AlertBadgeTheme(
-      warningForeground:
-          Color.lerp(warningForeground, other.warningForeground, t)!,
-      warningBackground:
-          Color.lerp(warningBackground, other.warningBackground, t)!,
-      criticalForeground:
-          Color.lerp(criticalForeground, other.criticalForeground, t)!,
-      criticalBackground:
-          Color.lerp(criticalBackground, other.criticalBackground, t)!,
+      warningForeground: Color.lerp(
+        warningForeground,
+        other.warningForeground,
+        t,
+      )!,
+      warningBackground: Color.lerp(
+        warningBackground,
+        other.warningBackground,
+        t,
+      )!,
+      criticalForeground: Color.lerp(
+        criticalForeground,
+        other.criticalForeground,
+        t,
+      )!,
+      criticalBackground: Color.lerp(
+        criticalBackground,
+        other.criticalBackground,
+        t,
+      )!,
     );
   }
 }
@@ -383,14 +434,26 @@ class FilterChipBarTheme extends ThemeExtension<FilterChipBarTheme> {
       return this;
     }
     return FilterChipBarTheme(
-      selectedForeground:
-          Color.lerp(selectedForeground, other.selectedForeground, t)!,
-      selectedBackground:
-          Color.lerp(selectedBackground, other.selectedBackground, t)!,
-      unselectedForeground:
-          Color.lerp(unselectedForeground, other.unselectedForeground, t)!,
-      unselectedBackground:
-          Color.lerp(unselectedBackground, other.unselectedBackground, t)!,
+      selectedForeground: Color.lerp(
+        selectedForeground,
+        other.selectedForeground,
+        t,
+      )!,
+      selectedBackground: Color.lerp(
+        selectedBackground,
+        other.selectedBackground,
+        t,
+      )!,
+      unselectedForeground: Color.lerp(
+        unselectedForeground,
+        other.unselectedForeground,
+        t,
+      )!,
+      unselectedBackground: Color.lerp(
+        unselectedBackground,
+        other.unselectedBackground,
+        t,
+      )!,
     );
   }
 }

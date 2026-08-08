@@ -6,6 +6,7 @@ import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:byte_beam/features/fleet/presentation/widgets/vehicle_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 /// Fleet home: filter chips + vehicle list (or empty state).
 class FleetHomePage extends StatelessWidget {
@@ -19,55 +20,60 @@ class FleetHomePage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Fleet')),
-      body: BlocBuilder<FleetBloc, FleetState>(
-        builder: (context, state) {
-          if (state is! FleetLoaded) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: SafeArea(
+        child: BlocBuilder<FleetBloc, FleetState>(
+          builder: (context, state) {
+            if (state is! FleetLoaded) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                child: FilterChipBar<FleetFilter>(
-                  options: FleetFilter.values,
-                  counts: {
-                    FleetFilter.all: state.counts.all,
-                    FleetFilter.moving: state.counts.moving,
-                    FleetFilter.idle: state.counts.idle,
-                    FleetFilter.stopped: state.counts.stopped,
-                    FleetFilter.offline: state.counts.offline,
-                  },
-                  selected: state.filter,
-                  labelBuilder: _labelFor,
-                  onChanged: (filter) {
-                    context.read<FleetBloc>().add(FilterChanged(filter));
-                  },
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: FilterChipBar<FleetFilter>(
+                    options: FleetFilter.values,
+                    counts: {
+                      FleetFilter.all: state.counts.all,
+                      FleetFilter.moving: state.counts.moving,
+                      FleetFilter.idle: state.counts.idle,
+                      FleetFilter.stopped: state.counts.stopped,
+                      FleetFilter.offline: state.counts.offline,
+                    },
+                    selected: state.filter,
+                    labelBuilder: _labelFor,
+                    onChanged: (filter) {
+                      context.read<FleetBloc>().add(FilterChanged(filter));
+                    },
+                  ),
                 ),
-              ),
-              Expanded(
-                child: state.vehicles.isEmpty
-                    ? const EmptyState(
-                        title: 'No vehicles',
-                        message:
-                            'Nothing matches this filter. Try another status.',
-                      )
-                    : SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            for (final vehicle in state.vehicles)
-                              VehicleCard(
-                                vehicle: vehicle,
-                                status: resolveStatus(vehicle, clock),
-                              ),
-                          ],
+                Expanded(
+                  child: state.vehicles.isEmpty
+                      ? const EmptyState(
+                          title: 'No vehicles',
+                          message:
+                              'Nothing matches this filter. Try another status.',
+                        )
+                      : SingleChildScrollView(
+                          child: Column(
+                            children: [
+                              for (final vehicle in state.vehicles)
+                                VehicleCard(
+                                  vehicle: vehicle,
+                                  status: resolveStatus(vehicle, clock),
+                                  onTap: () => context.push(
+                                    '/vehicle/${vehicle.vin}',
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      ),
-              ),
-            ],
-          );
-        },
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

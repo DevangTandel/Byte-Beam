@@ -1,4 +1,5 @@
 import 'package:byte_beam/core/clock/clock.dart';
+import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
 import 'package:byte_beam/core/widgets/verdict_pill.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
@@ -21,8 +22,22 @@ class VehicleDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Vehicle detail')),
+      backgroundColor: colorScheme.surface,
+      appBar: AppBar(
+        backgroundColor: colorScheme.surface,
+        surfaceTintColor: colorScheme.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        centerTitle: false,
+        title: Text(
+          'Vehicle detail',
+          style: textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
       body: BlocBuilder<VehicleDetailBloc, VehicleDetailState>(
         builder: (context, state) {
           if (state is! VehicleDetailLoaded) {
@@ -36,99 +51,191 @@ class VehicleDetailPage extends StatelessWidget {
               : Verdict.normal;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(
-                  vehicle.reg,
-                  style: Theme.of(context).textTheme.headlineSmall,
+                OutlinedCard(
+                  color: colorScheme.outlineVariant,
+                  backgroundColor: colorScheme.surface,
+                  cornerRadius: 16,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: Text(
+                              vehicle.reg,
+                              style: textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          StatusChip(status: state.status),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${vehicle.model} · ${vehicle.vin}',
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 4),
-                Text('${vehicle.model} · ${vehicle.vin}'),
-                const SizedBox(height: 8),
-                StatusChip(status: state.status),
-                const SizedBox(height: 24),
+                const SizedBox(height: 20),
                 Text(
                   'Alerts',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 if (state.alerts.isEmpty)
-                  Text(
-                    'No active alerts',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  OutlinedCard(
+                    color: colorScheme.outlineVariant,
+                    backgroundColor: colorScheme.surface,
+                    cornerRadius: 16,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 22,
+                          color: colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'No active alerts',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
                   )
                 else
-                  for (final alert in state.alerts)
+                  for (final alert in state.alerts) ...[
                     _AlertTile(
                       alert: alert,
                       onDismiss: () => _dismissAlert(context, alert),
                     ),
-                const SizedBox(height: 24),
+                    const SizedBox(height: 8),
+                  ],
+                const SizedBox(height: 20),
                 Text(
                   'Readings',
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ReadingMetricCard(
+                        label: 'SOC',
+                        pill: VerdictPill(
+                          key: const Key('reading-soc'),
+                          verdict: state.verdicts.soc,
+                          value: vehicle.soc.value,
+                          unit: '%',
+                          age: vehicle.soc.age,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ReadingMetricCard(
+                        label: 'Range',
+                        pill: VerdictPill(
+                          key: const Key('reading-range'),
+                          verdict: state.verdicts.range,
+                          value: vehicle.range.value,
+                          unit: 'km',
+                          age: vehicle.range.age,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
-                _ReadingRow(
-                  keyLabel: 'SOC',
-                  pill: VerdictPill(
-                    key: const Key('reading-soc'),
-                    verdict: state.verdicts.soc,
-                    value: vehicle.soc.value,
-                    unit: '%',
-                    age: vehicle.soc.age,
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _ReadingMetricCard(
+                        label: 'Speed',
+                        pill: VerdictPill(
+                          key: const Key('reading-speed'),
+                          verdict: state.verdicts.speed,
+                          value: vehicle.speed.value,
+                          unit: 'km/h',
+                          age: vehicle.speed.age,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _ReadingMetricCard(
+                        label: 'Battery temp',
+                        pill: VerdictPill(
+                          key: const Key('reading-batteryTemp'),
+                          verdict: state.verdicts.batteryTemp,
+                          value: vehicle.batteryTemp.value,
+                          unit: '°C',
+                          age: vehicle.batteryTemp.age,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                _ReadingRow(
-                  keyLabel: 'Range',
-                  pill: VerdictPill(
-                    key: const Key('reading-range'),
-                    verdict: state.verdicts.range,
-                    value: vehicle.range.value,
-                    unit: 'km',
-                    age: vehicle.range.age,
-                  ),
-                ),
-                _ReadingRow(
-                  keyLabel: 'Speed',
-                  pill: VerdictPill(
-                    key: const Key('reading-speed'),
-                    verdict: state.verdicts.speed,
-                    value: vehicle.speed.value,
-                    unit: 'km/h',
-                    age: vehicle.speed.age,
-                  ),
-                ),
-                _ReadingRow(
-                  keyLabel: 'Battery temp',
-                  pill: VerdictPill(
-                    key: const Key('reading-batteryTemp'),
-                    verdict: state.verdicts.batteryTemp,
-                    value: vehicle.batteryTemp.value,
-                    unit: '°C',
-                    age: vehicle.batteryTemp.age,
-                  ),
-                ),
-                _ReadingRow(
-                  keyLabel: 'Odometer',
+                const SizedBox(height: 12),
+                _ReadingMetricCard(
+                  label: 'Odometer',
                   pill: VerdictPill(
                     key: const Key('reading-odometer'),
                     verdict: state.verdicts.odometer,
                     value: vehicle.odometer.value,
                     unit: 'km',
                     age: vehicle.odometer.age,
+                    fractionDigits: 2,
                   ),
                 ),
-                _ReadingRow(
-                  keyLabel: 'Last ping',
-                  pill: VerdictPill(
-                    key: const Key('reading-lastPing'),
-                    verdict: lastPingVerdict,
-                    value: lastPingAge.inMinutes.toDouble(),
-                    unit: 'm ago',
-                    age: lastPingAge,
+                const SizedBox(height: 12),
+                OutlinedCard(
+                  color: colorScheme.outlineVariant,
+                  backgroundColor: colorScheme.surface,
+                  cornerRadius: 16,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Last ping',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                      VerdictPill(
+                        key: const Key('reading-lastPing'),
+                        verdict: lastPingVerdict,
+                        value: lastPingAge.inMinutes.toDouble(),
+                        unit: 'm ago',
+                        age: lastPingAge,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -154,31 +261,36 @@ class VehicleDetailPage extends StatelessWidget {
   }
 }
 
-class _ReadingRow extends StatelessWidget {
-  const _ReadingRow({
-    required this.keyLabel,
+class _ReadingMetricCard extends StatelessWidget {
+  const _ReadingMetricCard({
+    required this.label,
     required this.pill,
   });
 
-  final String keyLabel;
+  final String label;
   final VerdictPill pill;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return OutlinedCard(
+      color: colorScheme.outlineVariant,
+      backgroundColor: colorScheme.surface,
+      cornerRadius: 16,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(keyLabel),
-          ),
-          Expanded(
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: pill,
+          Text(
+            label,
+            style: textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 10),
+          pill,
         ],
       ),
     );
@@ -196,12 +308,16 @@ class _AlertTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final title = switch (alert.kind) {
       AlertKind.lowBattery => 'Low battery',
       AlertKind.batteryOverheating => 'Battery overheating',
     };
 
-    return Card(
+    return OutlinedCard(
+      color: colorScheme.outlineVariant,
+      backgroundColor: colorScheme.surface,
+      cornerRadius: 16,
       child: ListTile(
         title: Text(title),
         subtitle: Text(alert.severity.name),

@@ -30,6 +30,12 @@ class MockTelemetryDataSource implements TelemetryDataSource {
   StreamController<List<VehicleModel>>? _controller;
   bool _disposed = false;
 
+  /// How many periodic ticks have been applied (test observability).
+  int tickCount = 0;
+
+  /// Whether [Timer.periodic] is currently scheduled.
+  bool get hasActiveTimer => _timer?.isActive ?? false;
+
   @override
   Stream<List<VehicleModel>> watchFleet() {
     if (_disposed) {
@@ -59,6 +65,7 @@ class MockTelemetryDataSource implements TelemetryDataSource {
       return;
     }
 
+    tickCount++;
     _fleet = [
       for (final vehicle in _fleet) _mutate(vehicle),
     ];
@@ -81,7 +88,9 @@ class MockTelemetryDataSource implements TelemetryDataSource {
 
     final soc = vehicle.socPercent;
     return vehicle.copyWith(
-      socPercent: soc == null ? null : soc - socDelta,
+      socPercent: soc == null
+          ? null
+          : (soc - socDelta).clamp(0.0, 100.0).toDouble(),
       odometerKm: vehicle.odometerKm + odoDelta,
     );
   }
