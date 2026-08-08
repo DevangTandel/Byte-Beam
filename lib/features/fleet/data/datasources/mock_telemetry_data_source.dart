@@ -14,6 +14,9 @@ const kTelemetryTick = Duration(seconds: 3);
 /// Full-pack range in kilometres at 100% SOC.
 const kFullBatteryRangeKm = 532.0;
 
+/// Peak half-range of per-tick speed jitter for moving vehicles (km/h).
+const kSpeedJitterKmh = 2.0;
+
 /// Estimated remaining range from battery state of charge.
 double? rangeKmFromSoc(double? socPercent) {
   if (socPercent == null) {
@@ -24,18 +27,20 @@ double? rangeKmFromSoc(double? socPercent) {
 
 /// In-memory telemetry source that mutates the seed fleet every 3 seconds.
 ///
-/// SOC (battery %) drains on each tick for moving vehicles. Remaining range
-/// is always `socPercent / 100 * [kFullBatteryRangeKm]`.
+/// Moving vehicles: SOC drains, range tracks SOC, odometer rises, speed
+/// jitters by a few km/h, and [VehicleModel.lastPingSecondsAgo] resets to 0.
+/// Idle/stopped (online) vehicles only refresh lastPing. Offline vehicles
+/// ([kOfflinePingSeconds]+) are frozen.
 class MockTelemetryDataSource implements TelemetryDataSource {
   /// Creates a mock source from [seed], advancing with [random] jitter.
   MockTelemetryDataSource({
     required this.clock,
     required List<VehicleModel> seed,
     Random? random,
-  }) : _random = random ?? Random(42),
-       _fleet = [
-         for (final vehicle in seed) _withRangeFromSoc(vehicle),
-       ];
+  })  : _random = random ?? Random(42),
+        _fleet = [
+          for (final vehicle in seed) _withRangeFromSoc(vehicle),
+        ];
 
   /// App-launch / wall clock used by callers mapping to domain.
   final Clock clock;
@@ -94,27 +99,36 @@ class MockTelemetryDataSource implements TelemetryDataSource {
       return vehicle;
     }
 
-    // Idle / stopped: unchanged (no Random draws).
+    // Idle / stopped: refresh lastPing only (no Random draws).
     if (vehicle.speedKmh <= 0) {
-      return vehicle;
+      return vehicle.copyWith(lastPingSecondsAgo: 0);
     }
 
     final socDelta = 1.0 + (_random.nextDouble() * 0.2 - 0.1);
+    final speedJitter =
+        _random.nextDouble() * (kSpeedJitterKmh * 2) - kSpeedJitterKmh;
     final odoDelta = vehicle.speedKmh * (kTelemetryTick.inSeconds / 3600);
+    // Stay moving: clamp away from zero so status does not flip to stopped.
+    final nextSpeed =
+        (vehicle.speedKmh + speedJitter).clamp(1.0, 120.0).toDouble();
 
     final soc = vehicle.socPercent;
     if (soc == null) {
       return vehicle.copyWith(
+        speedKmh: nextSpeed,
         odometerKm: vehicle.odometerKm + odoDelta,
+        lastPingSecondsAgo: 0,
       );
     }
 
     // Battery % only decreases tick-over-tick for moving vehicles.
-    final nextSoc = (soc - socDelta).clamp(0.0, 100.0);
+    final nextSoc = (soc - socDelta).clamp(0.0, 100.0).toDouble();
     return vehicle.copyWith(
       socPercent: nextSoc,
       rangeKm: rangeKmFromSoc(nextSoc),
+      speedKmh: nextSpeed,
       odometerKm: vehicle.odometerKm + odoDelta,
+      lastPingSecondsAgo: 0,
     );
   }
 

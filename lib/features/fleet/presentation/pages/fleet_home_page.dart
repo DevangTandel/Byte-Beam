@@ -92,6 +92,7 @@ class FleetHomePage extends StatelessWidget {
     return VehicleCard(
       vehicle: vehicle,
       status: resolveStatus(vehicle, clock),
+      clock: clock,
       alertCount: summary.count,
       alertSeverity: summary.severity,
       onTap: () => context.push('/vehicle/${vehicle.vin}'),

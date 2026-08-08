@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/alerts/domain/alert_persistence.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
+import 'package:byte_beam/features/fleet/data/models/vehicle_model.dart';
 import 'package:byte_beam/features/fleet/domain/entities/reading.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
@@ -232,6 +235,77 @@ void main() {
               isFalse,
             )
             .having((s) => s.alerts, 'alerts', isNotEmpty),
+      ],
+    );
+
+    test(
+      'VIN0007 from seed_fleet.json: SOC 8% at lastPingSecondsAgo 720 '
+      'is STALE not ALERT (staleness overrides critical SOC breach)',
+      () {
+        final decoded =
+            jsonDecode(File('assets/seed_fleet.json').readAsStringSync())
+                as List<dynamic>;
+        final model = VehicleModel.fromJson(
+          decoded.cast<Map<String, dynamic>>().singleWhere(
+                (json) => json['vin'] == 'VIN0007',
+              ),
+        );
+
+        expect(model.vin, 'VIN0007');
+        expect(model.socPercent, 8);
+        expect(model.lastPingSecondsAgo, 720);
+
+        final vehicle = model.toDomain(clock);
+        final socVerdict = evaluateStaleness(vehicle.soc, kSocBounds, clock);
+
+        expect(socVerdict, Verdict.stale);
+        expect(socVerdict, isNot(Verdict.alert));
+
+        // Same 8% SOC when fresh would breach and show ALERT — proves the
+        // VIN0007 case is STALE because of age, not because 8% is in-bounds.
+        final freshEightPercent = buildVehicle(
+          vehicleVin: 'VIN0007',
+          soc: 8,
+          readingAge: const Duration(minutes: 1),
+        );
+        expect(
+          evaluateStaleness(freshEightPercent.soc, kSocBounds, clock),
+          Verdict.alert,
+        );
+      },
+    );
+
+    blocTest<VehicleDetailBloc, VehicleDetailState>(
+      'VIN0007 SOC 8% with seed-age ping yields STALE soc verdict, not ALERT',
+      build: () => VehicleDetailBloc(
+        vin: 'VIN0007',
+        repository: mockRepository,
+        alertsCubit: alertsCubit,
+        clock: clock,
+      ),
+      act: (bloc) async {
+        bloc.add(const VehicleDetailStarted());
+        final vin0007 = buildVehicle(
+          vehicleVin: 'VIN0007',
+          soc: 8,
+          range: 15,
+          speed: 0,
+          batteryTemp: 36,
+          odometer: 91004,
+          readingAge: const Duration(seconds: 720),
+          ignitionOn: true,
+        );
+        alertsVehicleController.add([vin0007]);
+        await pumpEventQueue();
+        fleetController.add([vin0007]);
+        await pumpEventQueue();
+      },
+      expect: () => [
+        isA<VehicleDetailLoaded>()
+            .having((s) => s.vehicle.vin, 'vin', 'VIN0007')
+            .having((s) => s.vehicle.soc.value, 'soc 8%', 8)
+            .having((s) => s.status, 'offline', VehicleStatus.offline)
+            .having((s) => s.verdicts.soc, 'STALE not ALERT', Verdict.stale),
       ],
     );
   });
