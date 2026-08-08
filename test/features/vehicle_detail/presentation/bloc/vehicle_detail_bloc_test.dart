@@ -4,7 +4,6 @@ import 'dart:io';
 
 import 'package:bloc_test/bloc_test.dart';
 import 'package:byte_beam/core/clock/clock.dart';
-import 'package:byte_beam/features/alerts/domain/alert_persistence.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/alerts/presentation/bloc/alerts_cubit.dart';
 import 'package:byte_beam/features/fleet/data/models/vehicle_model.dart';
@@ -34,7 +33,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const vin = 'VIN0003';
   const otherVin = 'VIN0001';
 
@@ -57,10 +56,10 @@ void main() {
   }) {
     final ping = now.subtract(readingAge);
     Reading<double> reading(double? value) => Reading<double>(
-          clock: clock,
-          value: value,
-          lastPingAt: ping,
-        );
+      clock: clock,
+      value: value,
+      lastPingAt: ping,
+    );
 
     return Vehicle(
       vin: vehicleVin,
@@ -77,11 +76,11 @@ void main() {
   }
 
   VehicleDetailBloc buildBloc() => VehicleDetailBloc(
-        vin: vin,
-        repository: mockRepository,
-        alertsCubit: alertsCubit,
-        clock: clock,
-      );
+    vin: vin,
+    repository: mockRepository,
+    alertsCubit: alertsCubit,
+    clock: clock,
+  );
 
   setUp(() {
     clock = FakeClock(now);
@@ -89,8 +88,7 @@ void main() {
     mockPersistence = MockAlertPersistence();
     fleetController = StreamController<List<Vehicle>>.broadcast();
     alertsVehicleController = StreamController<List<Vehicle>>.broadcast();
-    when(mockRepository.watchFleet())
-        .thenAnswer((_) => fleetController.stream);
+    when(mockRepository.watchFleet()).thenAnswer((_) => fleetController.stream);
     alertsCubit = AlertsCubit(
       vehicleStream: alertsVehicleController.stream,
       clock: clock,
@@ -110,7 +108,7 @@ void main() {
       build: buildBloc,
       act: (bloc) async {
         bloc.add(const VehicleDetailStarted());
-        final vehicle = buildVehicle(vehicleVin: vin, soc: 50, speed: 38);
+        final vehicle = buildVehicle(vehicleVin: vin);
         // Alerts first so cubit.state is ready before the fleet emission.
         alertsVehicleController.add([vehicle]);
         await pumpEventQueue();
@@ -167,12 +165,11 @@ void main() {
               isTrue,
             ),
         // Alerts clear on null SOC (alerts stream), then fleet updates verdicts.
-        isA<VehicleDetailLoaded>()
-            .having(
-              (s) => s.alerts.where((a) => a.kind == AlertKind.lowBattery),
-              'lowBattery cleared',
-              isEmpty,
-            ),
+        isA<VehicleDetailLoaded>().having(
+          (s) => s.alerts.where((a) => a.kind == AlertKind.lowBattery),
+          'lowBattery cleared',
+          isEmpty,
+        ),
         isA<VehicleDetailLoaded>()
             .having((s) => s.verdicts.soc, 'soc null verdict', isNull)
             .having(
@@ -231,7 +228,11 @@ void main() {
       },
       expect: () => [
         isA<VehicleDetailLoaded>()
-            .having((s) => s.status, 'not offline', isNot(VehicleStatus.offline))
+            .having(
+              (s) => s.status,
+              'not offline',
+              isNot(VehicleStatus.offline),
+            )
             .having((s) => s.status, 'stopped', VehicleStatus.stopped)
             .having((s) => s.verdicts.soc, 'soc stale', Verdict.stale)
             .having(
@@ -280,8 +281,8 @@ void main() {
                 as List<dynamic>;
         final model = VehicleModel.fromJson(
           decoded.cast<Map<String, dynamic>>().singleWhere(
-                (json) => json['vin'] == 'VIN0007',
-              ),
+            (json) => json['vin'] == 'VIN0007',
+          ),
         );
 
         expect(model.vin, 'VIN0007');
@@ -299,7 +300,6 @@ void main() {
         final freshEightPercent = buildVehicle(
           vehicleVin: 'VIN0007',
           soc: 8,
-          readingAge: const Duration(minutes: 1),
         );
         expect(
           evaluateStaleness(freshEightPercent.soc, kSocBounds, clock),
@@ -326,7 +326,6 @@ void main() {
           batteryTemp: 36,
           odometer: 91004,
           readingAge: const Duration(seconds: 720),
-          ignitionOn: true,
         );
         alertsVehicleController.add([vin0007]);
         await pumpEventQueue();

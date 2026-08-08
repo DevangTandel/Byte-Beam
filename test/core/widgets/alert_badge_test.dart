@@ -33,13 +33,15 @@ void main() {
       );
 
       final pill = tester.widget<DecoratedBox>(
-        find.descendant(
-          of: find.byType(AlertBadge),
-          matching: find.byType(DecoratedBox),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(AlertBadge),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
       );
       expect(
-        (pill.decoration! as BoxDecoration).color,
+        (pill.decoration as BoxDecoration).color,
         styles.backgroundFor(AlertSeverity.critical),
       );
     });

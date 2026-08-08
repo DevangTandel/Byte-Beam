@@ -6,6 +6,8 @@ import 'package:byte_beam/features/fleet/data/models/vehicle_model.dart';
 import 'package:byte_beam/features/fleet/domain/entities/reading.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
+import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
+import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:byte_beam/features/fleet/presentation/bloc/fleet_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -172,9 +174,9 @@ void main() {
       expect: () => [
         isA<FleetLoaded>()
             .having((s) => s.filter, 'filter', FleetFilter.all)
-            .having((s) => s.vehicles, 'vehicles', hasLength(8))
+            .having((s) => s.items, 'items', hasLength(8))
             .having(
-              (s) => s.vehicles.map((v) => v.vin).toList(),
+              (s) => s.items.map((i) => i.vehicle.vin).toList(),
               'vins',
               [
                 'VIN0001',
@@ -189,17 +191,32 @@ void main() {
             )
             .having((s) => s.counts, 'counts', seedCounts),
       ],
-      verify: (_) {
+      verify: (bloc) {
+        final loaded = bloc.state as FleetLoaded;
+
         // Sanity-check status breakdown against resolveStatus.
         final byStatus = <VehicleStatus, int>{};
-        for (final vehicle in fleet) {
-          final status = resolveStatus(vehicle, clock);
-          byStatus[status] = (byStatus[status] ?? 0) + 1;
+        for (final item in loaded.items) {
+          byStatus[item.status] = (byStatus[item.status] ?? 0) + 1;
+          expect(item.status, resolveStatus(item.vehicle, clock));
+          expect(
+            item.socVerdict,
+            evaluateStaleness(item.vehicle.soc, kSocBounds, clock),
+          );
+          expect(
+            item.rangeVerdict,
+            evaluateStaleness(item.vehicle.range, kRangeBounds, clock),
+          );
         }
         expect(byStatus[VehicleStatus.moving], 3);
         expect(byStatus[VehicleStatus.idle], 1);
         expect(byStatus[VehicleStatus.stopped], 3);
         expect(byStatus[VehicleStatus.offline], 1);
+
+        // VIN0007 is offline + stale SOC (not alert-red for low SOC).
+        final vin7 = loaded.items.singleWhere((i) => i.vehicle.vin == 'VIN0007');
+        expect(vin7.status, VehicleStatus.offline);
+        expect(vin7.socVerdict, Verdict.stale);
       },
     );
 
@@ -216,23 +233,28 @@ void main() {
         isA<FleetLoaded>().having((s) => s.filter, 'filter', FleetFilter.all),
         isA<FleetLoaded>()
             .having((s) => s.filter, 'filter', FleetFilter.moving)
-            .having((s) => s.vehicles, 'vehicles', hasLength(3))
+            .having((s) => s.items, 'items', hasLength(3))
             .having(
-              (s) => s.vehicles.map((v) => v.vin).toList(),
+              (s) => s.items.map((i) => i.vehicle.vin).toList(),
               'moving vins',
               ['VIN0001', 'VIN0003', 'VIN0005'],
+            )
+            .having(
+              (s) => s.items.every((i) => i.status == VehicleStatus.moving),
+              'all filtered items are moving',
+              isTrue,
             )
             // Live counts are always over the full fleet, not the filtered list.
             .having((s) => s.counts, 'counts', seedCounts)
             .having((s) => s.counts.moving, 'counts.moving', 3)
             .having((s) => s.counts.all, 'counts.all', 8)
             .having(
-              (s) => s.counts.moving == s.vehicles.length,
+              (s) => s.counts.moving == s.items.length,
               'moving count equals filtered length only by coincidence here',
               isTrue,
             )
             .having(
-              (s) => s.counts.all > s.vehicles.length,
+              (s) => s.counts.all > s.items.length,
               'all count remains full-set size while list is filtered',
               isTrue,
             ),
@@ -240,7 +262,7 @@ void main() {
     );
 
     blocTest<FleetBloc, FleetState>(
-      'filter with zero matches emits FleetLoaded with an empty vehicles list '
+      'filter with zero matches emits FleetLoaded with an empty items list '
       '(counts still reflect the full unfiltered set)',
       build: () {
         // Fleet with no idle vehicles → FilterChanged(idle) yields [].
@@ -259,7 +281,7 @@ void main() {
       expect: () => [
         isA<FleetLoaded>()
             .having((s) => s.filter, 'filter', FleetFilter.all)
-            .having((s) => s.vehicles, 'vehicles', hasLength(7))
+            .having((s) => s.items, 'items', hasLength(7))
             .having(
               (s) => s.counts,
               'counts over full (no-idle) set',
@@ -273,7 +295,7 @@ void main() {
             ),
         isA<FleetLoaded>()
             .having((s) => s.filter, 'filter', FleetFilter.idle)
-            .having((s) => s.vehicles, 'vehicles', isEmpty)
+            .having((s) => s.items, 'items', isEmpty)
             .having(
               (s) => s.counts,
               'counts unchanged vs full set when filter matches nothing',

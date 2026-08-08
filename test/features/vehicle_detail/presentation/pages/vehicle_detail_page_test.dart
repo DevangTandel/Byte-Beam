@@ -67,13 +67,13 @@ void main() {
   }
 
   Alert buildAlert() => Alert(
-        id: 'alert-1',
-        vin: vin,
-        kind: AlertKind.lowBattery,
-        severity: AlertSeverity.warning,
-        raisedAt: now,
-        isBasedOnStaleData: false,
-      );
+    id: 'alert-1',
+    vin: vin,
+    kind: AlertKind.lowBattery,
+    severity: AlertSeverity.warning,
+    raisedAt: now,
+    isBasedOnStaleData: false,
+  );
 
   VehicleDetailLoaded loadedState({List<Alert>? alerts}) {
     final vehicle = buildVehicle();
@@ -216,12 +216,12 @@ void main() {
     testWidgets(
       'last ping age 4:59 floors to "4 m ago" not "5 m ago"',
       (tester) async {
-        final pingAge = const Duration(minutes: 4, seconds: 59);
+        const pingAge = Duration(minutes: 4, seconds: 59);
         Reading<double> reading(double? value) => Reading<double>(
-              clock: clock,
-              value: value,
-              lastPingAt: now.subtract(pingAge),
-            );
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
 
         final vehicle = Vehicle(
           vin: vin,
@@ -265,12 +265,12 @@ void main() {
       'mixed UI: StatusChip not Offline while SOC pill is STALE grey '
       '(6 min ping: stale but online)',
       (tester) async {
-        final pingAge = const Duration(minutes: 6);
+        const pingAge = Duration(minutes: 6);
         Reading<double> reading(double? value) => Reading<double>(
-              clock: clock,
-              value: value,
-              lastPingAt: now.subtract(pingAge),
-            );
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
 
         final vehicle = Vehicle(
           vin: vin,
@@ -324,10 +324,10 @@ void main() {
         when(() => mockDetailBloc.vin).thenReturn(vin0006);
 
         Reading<double> reading(double? value) => Reading<double>(
-              clock: clock,
-              value: value,
-              lastPingAt: now.subtract(const Duration(minutes: 1)),
-            );
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(const Duration(minutes: 1)),
+        );
 
         final vehicle = Vehicle(
           vin: vin0006,
@@ -386,12 +386,12 @@ void main() {
         const vin0007 = 'VIN0007';
         when(() => mockDetailBloc.vin).thenReturn(vin0007);
 
-        final pingAge = const Duration(seconds: 720);
+        const pingAge = Duration(seconds: 720);
         Reading<double> reading(double? value) => Reading<double>(
-              clock: clock,
-              value: value,
-              lastPingAt: now.subtract(pingAge),
-            );
+          clock: clock,
+          value: value,
+          lastPingAt: now.subtract(pingAge),
+        );
 
         final vehicle = Vehicle(
           vin: vin0007,
@@ -438,8 +438,7 @@ void main() {
         expect(find.text('8.00 %'), findsOneWidget);
         expect(find.textContaining('data'), findsWidgets);
 
-        final socColor =
-            tester.widget<Text>(find.text('8.00 %')).style?.color;
+        final socColor = tester.widget<Text>(find.text('8.00 %')).style?.color;
         expect(socColor, styles.staleValueColor);
         expect(socColor, isNot(styles.alertValueColor));
       },
@@ -483,8 +482,9 @@ void main() {
     testWidgets(
       'selecting a reason closes sheet, removes alert, shows UNDO snackbar',
       (tester) async {
-        final detailStates =
-            StreamController<VehicleDetailState>.broadcast(sync: true);
+        final detailStates = StreamController<VehicleDetailState>.broadcast(
+          sync: true,
+        );
         addTearDown(detailStates.close);
 
         final withAlert = loadedState();
@@ -522,8 +522,9 @@ void main() {
     );
 
     testWidgets('tapping UNDO restores the alert to the list', (tester) async {
-      final detailStates =
-          StreamController<VehicleDetailState>.broadcast(sync: true);
+      final detailStates = StreamController<VehicleDetailState>.broadcast(
+        sync: true,
+      );
       addTearDown(detailStates.close);
 
       final withAlert = loadedState();

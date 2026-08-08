@@ -262,7 +262,8 @@ void main() {
           expect(
             v7,
             vin0007Seed,
-            reason: 'VIN0007 must be unchanged at emission $i '
+            reason:
+                'VIN0007 must be unchanged at emission $i '
                 '(offline: no value mutation, lastPing must not advance)',
           );
           expect(
@@ -308,8 +309,7 @@ void main() {
           var sawCritical = false;
 
           for (var tick = 0; tick < 25; tick++) {
-            final model =
-                emissions.last.singleWhere((v) => v.vin == 'VIN0003');
+            final model = emissions.last.singleWhere((v) => v.vin == 'VIN0003');
             final vehicle = model.toDomain(clock);
             final alerts = evaluateAlerts(vehicle, previous, clock);
             previous = alerts;
@@ -353,40 +353,44 @@ void main() {
       },
     );
 
-    test('after dispose(), no further emissions even when fake time advances',
-        () {
-      fakeAsync((async) {
-        final clock = FakeClock(launchAt);
-        final source = MockTelemetryDataSource(
-          clock: clock,
-          seed: loadSeedFleet(),
-          random: Random(42),
-        );
+    test(
+      'after dispose(), no further emissions even when fake time advances',
+      () {
+        fakeAsync((async) {
+          final clock = FakeClock(launchAt);
+          final source = MockTelemetryDataSource(
+            clock: clock,
+            seed: loadSeedFleet(),
+            random: Random(42),
+          );
 
-        final emissions = <List<VehicleModel>>[];
-        final sub = source.watchFleet().listen(emissions.add);
+          final emissions = <List<VehicleModel>>[];
+          final sub = source.watchFleet().listen(emissions.add);
 
-        async.flushMicrotasks();
-        expect(emissions, hasLength(1));
+          async.flushMicrotasks();
+          expect(emissions, hasLength(1));
 
-        async.elapse(const Duration(seconds: 3));
-        expect(emissions, hasLength(2));
+          async.elapse(const Duration(seconds: 3));
+          expect(emissions, hasLength(2));
 
-        source.dispose();
-        final countAtDispose = emissions.length;
+          source.dispose();
+          final countAtDispose = emissions.length;
 
-        async.elapse(const Duration(seconds: 3));
-        async.elapse(const Duration(seconds: 9));
-        async.flushMicrotasks();
+          async
+            ..elapse(const Duration(seconds: 3))
+            ..elapse(const Duration(seconds: 9))
+            ..flushMicrotasks();
 
-        expect(
-          emissions,
-          hasLength(countAtDispose),
-          reason: 'dispose() must cancel Timer.periodic; no ticks after dispose',
-        );
+          expect(
+            emissions,
+            hasLength(countAtDispose),
+            reason:
+                'dispose() must cancel Timer.periodic; no ticks after dispose',
+          );
 
-        sub.cancel();
-      });
-    });
+          sub.cancel();
+        });
+      },
+    );
   });
 }

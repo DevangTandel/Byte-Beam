@@ -1,22 +1,24 @@
-import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/core/widgets/alert_badge.dart';
 import 'package:byte_beam/core/widgets/outlined_card.dart';
 import 'package:byte_beam/core/widgets/status_chip.dart';
 import 'package:byte_beam/core/widgets/verdict_pill.dart';
 import 'package:byte_beam/features/alerts/domain/entities/alert.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
-import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
 import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
 import 'package:flutter/material.dart';
 
 /// Fleet list row for a single [Vehicle].
+///
+/// Domain decisions ([status], [socVerdict], [rangeVerdict]) are precomputed
+/// by the caller — this widget only binds values to UI.
 class VehicleCard extends StatelessWidget {
   /// Creates a [VehicleCard].
   const VehicleCard({
     required this.vehicle,
     required this.status,
-    required this.clock,
+    required this.socVerdict,
+    required this.rangeVerdict,
     this.alertCount = 0,
     this.alertSeverity,
     this.onTap,
@@ -29,8 +31,11 @@ class VehicleCard extends StatelessWidget {
   /// Precomputed operational status (no logic in the widget).
   final VehicleStatus status;
 
-  /// Clock used for SOC/range honesty (§4) via [evaluateStaleness].
-  final Clock clock;
+  /// Precomputed SOC honesty verdict (null → dash).
+  final Verdict? socVerdict;
+
+  /// Precomputed range honesty verdict (null → dash).
+  final Verdict? rangeVerdict;
 
   /// Active alert count for this vehicle (badge hidden when 0).
   final int alertCount;
@@ -46,9 +51,6 @@ class VehicleCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
     final showBadge = alertCount > 0 && alertSeverity != null;
-
-    final socVerdict = evaluateStaleness(vehicle.soc, kSocBounds, clock);
-    final rangeVerdict = evaluateStaleness(vehicle.range, kRangeBounds, clock);
 
     return OutlinedCard(
       color: colorScheme.outlineVariant,
@@ -81,7 +83,7 @@ class VehicleCard extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${vehicle.model} · ${vehicle.vin}',
-                          style: textTheme.bodySmall?.copyWith(
+                          style: textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
                           ),
                         ),

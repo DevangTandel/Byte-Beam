@@ -13,7 +13,9 @@ void main() {
   }
 
   group('StatusChip', () {
-    testWidgets('renders Moving label with moving theme colors', (tester) async {
+    testWidgets('renders Moving label with moving theme colors', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(const StatusChip(status: VehicleStatus.moving)),
       );
@@ -25,13 +27,15 @@ void main() {
       expect(labelStyle?.color, styles.foregroundFor(VehicleStatus.moving));
 
       final pill = tester.widget<DecoratedBox>(
-        find.descendant(
-          of: find.byType(StatusChip),
-          matching: find.byType(DecoratedBox),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(StatusChip),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
       );
       expect(
-        (pill.decoration! as BoxDecoration).color,
+        (pill.decoration as BoxDecoration).color,
         styles.backgroundFor(VehicleStatus.moving),
       );
     });

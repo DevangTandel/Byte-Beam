@@ -31,7 +31,7 @@ VehicleStatus resolveStatus(Vehicle v, Clock clock) {
     return VehicleStatus.moving;
   }
 
-  if (speed == 0 && v.ignitionOn == true) {
+  if (speed == 0 && (v.ignitionOn ?? false)) {
     return VehicleStatus.idle;
   }
 

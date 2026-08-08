@@ -23,7 +23,7 @@ GoRouter createAppRouter({GetIt? getIt}) {
         builder: (context, state) {
           return BlocProvider<FleetBloc>.value(
             value: locator<FleetBloc>(),
-            child: FleetHomePage(clock: locator()),
+            child: const FleetHomePage(),
           );
         },
       ),

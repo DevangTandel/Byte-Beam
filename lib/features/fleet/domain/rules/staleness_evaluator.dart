@@ -38,7 +38,7 @@ Verdict? evaluateStaleness(
     return null;
   }
 
-  // Floor age to whole seconds (honesty: never round up), same as [Reading.age].
+  // Floor age to whole seconds (honesty: never round up), same as [Reading.age]
   final ping = reading.lastPingAt;
   final age = ping == null
       ? Duration.zero

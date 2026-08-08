@@ -14,10 +14,9 @@ import 'package:flutter/foundation.dart';
 class FleetRepositoryImpl implements FleetRepository {
   /// Creates a [FleetRepositoryImpl].
   FleetRepositoryImpl({
-    required TelemetryDataSource dataSource,
-    required Clock launchClock,
-  })  : _dataSource = dataSource,
-        _launchClock = launchClock;
+    required this._dataSource,
+    required this._launchClock,
+  });
 
   final TelemetryDataSource _dataSource;
   final Clock _launchClock;
