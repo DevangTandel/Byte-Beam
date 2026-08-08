@@ -70,7 +70,7 @@ class SpyVehicleDetailBloc extends VehicleDetailBloc {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final now = DateTime(2026, 8, 7, 12, 0, 0);
+  final now = DateTime(2026, 8, 7, 12);
 
   const seed = [
     VehicleModel(

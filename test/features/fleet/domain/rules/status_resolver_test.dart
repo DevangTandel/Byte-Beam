@@ -17,7 +17,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
 
   group('resolveStatus', () {
     group('precedence (first match wins)', () {
@@ -145,10 +145,10 @@ Vehicle _vehicle({
   required bool? ignitionOn,
 }) {
   Reading<double> reading(double? value) => Reading<double>(
-        clock: clock,
-        value: value,
-        lastPingAt: lastPingAt,
-      );
+    clock: clock,
+    value: value,
+    lastPingAt: lastPingAt,
+  );
 
   return Vehicle(
     vin: 'VIN-TEST',

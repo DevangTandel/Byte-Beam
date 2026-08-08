@@ -8,8 +8,6 @@ part 'vehicle_model.g.dart';
 
 @freezed
 abstract class VehicleModel with _$VehicleModel {
-  const VehicleModel._();
-
   const factory VehicleModel({
     required String vin,
     required String reg,
@@ -22,6 +20,7 @@ abstract class VehicleModel with _$VehicleModel {
     bool? ignitionOn,
     double? batteryTempC,
   }) = _VehicleModel;
+  const VehicleModel._();
 
   factory VehicleModel.fromJson(Map<String, dynamic> json) =>
       _$VehicleModelFromJson(json);

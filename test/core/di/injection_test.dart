@@ -21,26 +21,29 @@ void main() {
     await sl.reset();
   });
 
-  test('configureDependencies registers clock, data, repo, and blocs', () async {
-    const seed = [
-      VehicleModel(
-        vin: 'VIN1',
-        reg: 'R1',
-        model: 'M',
-        speedKmh: 0,
-        odometerKm: 1,
-        lastPingSecondsAgo: 1,
-      ),
-    ];
-    await configureDependencies(seed: seed);
+  test(
+    'configureDependencies registers clock, data, repo, and blocs',
+    () async {
+      const seed = [
+        VehicleModel(
+          vin: 'VIN1',
+          reg: 'R1',
+          model: 'M',
+          speedKmh: 0,
+          odometerKm: 1,
+          lastPingSecondsAgo: 1,
+        ),
+      ];
+      await configureDependencies(seed: seed);
 
-    expect(sl<SystemClock>(), isA<SystemClock>());
-    expect(sl<Clock>(), same(sl<SystemClock>()));
-    expect(sl<MockTelemetryDataSource>(), isA<MockTelemetryDataSource>());
-    expect(sl<FleetRepositoryImpl>(), isA<FleetRepositoryImpl>());
-    expect(sl<AlertsCubit>(), isA<AlertsCubit>());
-    expect(sl<FleetBloc>(), isA<FleetBloc>());
-    expect(sl<VehicleDetailBloc>(param1: 'VIN1').vin, 'VIN1');
-    expect(createAppRouter().configuration.routes, isNotEmpty);
-  });
+      expect(sl<SystemClock>(), isA<SystemClock>());
+      expect(sl<Clock>(), same(sl<SystemClock>()));
+      expect(sl<MockTelemetryDataSource>(), isA<MockTelemetryDataSource>());
+      expect(sl<FleetRepositoryImpl>(), isA<FleetRepositoryImpl>());
+      expect(sl<AlertsCubit>(), isA<AlertsCubit>());
+      expect(sl<FleetBloc>(), isA<FleetBloc>());
+      expect(sl<VehicleDetailBloc>(param1: 'VIN1').vin, 'VIN1');
+      expect(createAppRouter().configuration.routes, isNotEmpty);
+    },
+  );
 }

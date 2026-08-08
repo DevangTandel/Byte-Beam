@@ -147,7 +147,7 @@ void main() {
           reason: 'range tracks SOC at 532 km / 100%',
         );
         expect(
-          vin0003Tick1.socPercent!,
+          vin0003Tick1.socPercent,
           lessThan(vin0003Seed.socPercent!),
           reason: 'battery % must decrease on each moving tick',
         );
@@ -171,7 +171,7 @@ void main() {
         expect(vin0005Tick1.speedKmh, expectedVin0005SpeedAfterTick1);
         expect(vin0005Tick1.lastPingSecondsAgo, 0);
 
-        // VIN0007: values AND lastPing must be identical to seed (not advanced).
+        // VIN0007: values AND lastPing must be identical to seed (not advanced)
         final vin0007Tick1 = tick1.singleWhere((v) => v.vin == 'VIN0007');
         expect(
           vin0007Tick1,

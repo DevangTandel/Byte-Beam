@@ -27,7 +27,7 @@ Future<List<Map<String, dynamic>>> loadSeedFleetJson() async {
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final launchAt = DateTime(2026, 8, 7, 12, 0, 0);
+  final launchAt = DateTime(2026, 8, 7, 12);
   final clock = FakeClock(launchAt);
 
   group('VehicleModel.fromJson (seed_fleet.json)', () {

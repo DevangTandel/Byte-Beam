@@ -47,7 +47,9 @@ void main() {
       expect(shape.side.width, stroke);
     });
 
-    testWidgets('defaults outline color to ColorScheme.outline', (tester) async {
+    testWidgets('defaults outline color to ColorScheme.outline', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         wrap(const OutlinedCard(child: Text('default'))),
       );
@@ -69,10 +71,12 @@ void main() {
       );
 
       final padding = tester.widget<Padding>(
-        find.descendant(
-          of: find.byType(OutlinedCard),
-          matching: find.byType(Padding),
-        ).first,
+        find
+            .descendant(
+              of: find.byType(OutlinedCard),
+              matching: find.byType(Padding),
+            )
+            .first,
       );
       expect(padding.padding, const EdgeInsets.all(8));
     });

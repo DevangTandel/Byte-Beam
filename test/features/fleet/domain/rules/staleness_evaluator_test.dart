@@ -16,7 +16,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const bounds = ThresholdBounds(min: 20, max: 80);
 
   group('evaluateStaleness', () {
@@ -65,16 +65,18 @@ void main() {
       });
     });
 
-    test('non-null, stale (age > 5min) -> stale, even if value breaches thresholds',
-        () {
-      final clock = FakeClock(now);
-      final reading = Reading<double>(
-        clock: clock,
-        value: 999,
-        lastPingAt: now.subtract(const Duration(minutes: 5, seconds: 1)),
-      );
+    test(
+      'non-null, stale (age > 5min) -> stale,even if value breaches thresholds',
+      () {
+        final clock = FakeClock(now);
+        final reading = Reading<double>(
+          clock: clock,
+          value: 999,
+          lastPingAt: now.subtract(const Duration(minutes: 5, seconds: 1)),
+        );
 
-      expect(evaluateStaleness(reading, bounds, clock), Verdict.stale);
-    });
+        expect(evaluateStaleness(reading, bounds, clock), Verdict.stale);
+      },
+    );
   });
 }

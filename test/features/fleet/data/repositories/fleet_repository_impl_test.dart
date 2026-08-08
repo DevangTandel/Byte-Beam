@@ -70,8 +70,6 @@ void main() {
           vin: 'VIN0008',
           reg: 'KA 41 PQ 8642',
           model: 'eVan 30',
-          socPercent: null,
-          rangeKm: null,
           speedKmh: 0,
           ignitionOn: false,
           batteryTempC: 25,

@@ -1,12 +1,12 @@
 import 'dart:async';
 
-import 'package:bloc/bloc.dart';
 import 'package:byte_beam/core/clock/clock.dart';
 import 'package:byte_beam/features/fleet/domain/entities/vehicle.dart';
 import 'package:byte_beam/features/fleet/domain/repositories/fleet_repository.dart';
 import 'package:byte_beam/features/fleet/domain/rules/reading_bounds.dart';
 import 'package:byte_beam/features/fleet/domain/rules/staleness_evaluator.dart';
 import 'package:byte_beam/features/fleet/domain/rules/status_resolver.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 /// Chip / list filter for the fleet screen.
 enum FleetFilter {
@@ -152,11 +152,9 @@ class FleetLoaded extends FleetState {
 class FleetBloc extends Bloc<FleetEvent, FleetState> {
   /// Creates a [FleetBloc].
   FleetBloc({
-    required FleetRepository repository,
-    required Clock clock,
-  }) : _repository = repository,
-       _clock = clock,
-       super(const FleetInitial()) {
+    required this._repository,
+    required this._clock,
+  }) : super(const FleetInitial()) {
     on<FleetStarted>(_onStarted);
     on<_FleetUpdated>(_onFleetUpdated);
     on<FilterChanged>(_onFilterChanged);

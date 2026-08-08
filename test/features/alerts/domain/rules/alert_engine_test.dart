@@ -18,7 +18,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final now = DateTime(2026, 8, 7, 12, 10, 0);
+  final now = DateTime(2026, 8, 7, 12, 10);
   const vin = 'VIN-ALERT-1';
 
   group('evaluateAlerts', () {
@@ -65,24 +65,27 @@ void main() {
       );
     });
 
-    test('3. battery temp > 45C (fresh) -> one batteryOverheating critical', () {
-      final clock = FakeClock(now);
-      final vehicle = _vehicle(
-        clock: clock,
-        vin: vin,
-        now: now,
-        soc: 80,
-        batteryTemp: 46,
-        batteryTempAge: const Duration(minutes: 1),
-      );
+    test(
+      '3. battery temp > 45C (fresh) -> one batteryOverheating critical',
+      () {
+        final clock = FakeClock(now);
+        final vehicle = _vehicle(
+          clock: clock,
+          vin: vin,
+          now: now,
+          soc: 80,
+          batteryTemp: 46,
+          batteryTempAge: const Duration(minutes: 1),
+        );
 
-      final alerts = evaluateAlerts(vehicle, const [], clock);
+        final alerts = evaluateAlerts(vehicle, const [], clock);
 
-      expect(alerts, hasLength(1));
-      expect(alerts.single.kind, AlertKind.batteryOverheating);
-      expect(alerts.single.severity, AlertSeverity.critical);
-      expect(alerts.single.isBasedOnStaleData, isFalse);
-    });
+        expect(alerts, hasLength(1));
+        expect(alerts.single.kind, AlertKind.batteryOverheating);
+        expect(alerts.single.severity, AlertSeverity.critical);
+        expect(alerts.single.isBasedOnStaleData, isFalse);
+      },
+    );
 
     test('4. SOC below 10% but STALE -> no NEW alert raised '
         '(staleness blocks opening alerts, §4.2)', () {
@@ -103,41 +106,43 @@ void main() {
       expect(alerts, isEmpty);
     });
 
-    test('5. existing alert + reading goes STALE -> alert PERSISTS with '
-        'isBasedOnStaleData = true (existing alerts are flagged, not dropped)',
-        () {
-      // Contrast with case 4: same stale SOC breach, but an alert already
-      // exists from a prior fresh tick. Staleness must NOT clear it — only
-      // mark isBasedOnStaleData. New alerts stay blocked (case 4); survivors
-      // are flagged (this case).
-      final clock = FakeClock(now);
-      const existingId = 'alert-low-battery-1';
-      final previous = [
-        Alert(
-          id: existingId,
+    test(
+      '5. existing alert + reading goes STALE -> alert PERSISTS with '
+      'isBasedOnStaleData = true (existing alerts are flagged, not dropped)',
+      () {
+        // Contrast with case 4: same stale SOC breach, but an alert already
+        // exists from a prior fresh tick. Staleness must NOT clear it — only
+        // mark isBasedOnStaleData. New alerts stay blocked (case 4); survivors
+        // are flagged (this case).
+        final clock = FakeClock(now);
+        const existingId = 'alert-low-battery-1';
+        final previous = [
+          Alert(
+            id: existingId,
+            vin: vin,
+            kind: AlertKind.lowBattery,
+            severity: AlertSeverity.critical,
+            raisedAt: now.subtract(const Duration(minutes: 3)),
+            isBasedOnStaleData: false,
+          ),
+        ];
+        final vehicle = _vehicle(
+          clock: clock,
           vin: vin,
-          kind: AlertKind.lowBattery,
-          severity: AlertSeverity.critical,
-          raisedAt: now.subtract(const Duration(minutes: 3)),
-          isBasedOnStaleData: false,
-        ),
-      ];
-      final vehicle = _vehicle(
-        clock: clock,
-        vin: vin,
-        now: now,
-        soc: 5,
-        socAge: const Duration(minutes: 5, seconds: 1),
-        batteryTemp: 30,
-      );
+          now: now,
+          soc: 5,
+          socAge: const Duration(minutes: 5, seconds: 1),
+          batteryTemp: 30,
+        );
 
-      final alerts = evaluateAlerts(vehicle, previous, clock);
+        final alerts = evaluateAlerts(vehicle, previous, clock);
 
-      expect(alerts, hasLength(1));
-      expect(alerts.single.id, existingId);
-      expect(alerts.single.kind, AlertKind.lowBattery);
-      expect(alerts.single.isBasedOnStaleData, isTrue);
-    });
+        expect(alerts, hasLength(1));
+        expect(alerts.single.id, existingId);
+        expect(alerts.single.kind, AlertKind.lowBattery);
+        expect(alerts.single.isBasedOnStaleData, isTrue);
+      },
+    );
 
     test('6. existing alert + reading recovers above threshold (fresh) '
         '-> alert removed (auto-resolve, §2.4)', () {
@@ -289,10 +294,10 @@ Vehicle _vehicle({
   Duration batteryTempAge = Duration.zero,
 }) {
   Reading<double> reading(double value, Duration age) => Reading<double>(
-        clock: clock,
-        value: value,
-        lastPingAt: now.subtract(age),
-      );
+    clock: clock,
+    value: value,
+    lastPingAt: now.subtract(age),
+  );
 
   return Vehicle(
     vin: vin,

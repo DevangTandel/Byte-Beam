@@ -15,7 +15,7 @@ class FakeClock implements Clock {
 }
 
 void main() {
-  final lastPingAt = DateTime(2026, 8, 7, 12, 0, 0);
+  final lastPingAt = DateTime(2026, 8, 7, 12);
 
   group('Reading', () {
     group('fields', () {
@@ -51,7 +51,9 @@ void main() {
 
     group('age', () {
       test('is the elapsed time from lastPingAt to clock now()', () {
-        final clock = FakeClock(lastPingAt.add(const Duration(minutes: 2, seconds: 30)));
+        final clock = FakeClock(
+          lastPingAt.add(const Duration(minutes: 2, seconds: 30)),
+        );
         final reading = Reading<int>(
           clock: clock,
           value: 78,
@@ -63,7 +65,9 @@ void main() {
 
       test('uses floor semantics and never rounds up sub-minute remainder', () {
         final clock = FakeClock(
-          lastPingAt.add(const Duration(minutes: 4, seconds: 59, milliseconds: 999)),
+          lastPingAt.add(
+            const Duration(minutes: 4, seconds: 59, milliseconds: 999),
+          ),
         );
         final reading = Reading<int>(
           clock: clock,
@@ -98,7 +102,9 @@ void main() {
 
     group('isStale', () {
       test('is false when age is exactly 4 minutes 59 seconds', () {
-        final clock = FakeClock(lastPingAt.add(const Duration(minutes: 4, seconds: 59)));
+        final clock = FakeClock(
+          lastPingAt.add(const Duration(minutes: 4, seconds: 59)),
+        );
         final reading = Reading<int>(
           clock: clock,
           value: 78,
@@ -138,7 +144,9 @@ void main() {
 
       test('does not round up sub-minute remainder below threshold', () {
         final clock = FakeClock(
-          lastPingAt.add(const Duration(minutes: 4, seconds: 59, milliseconds: 999)),
+          lastPingAt.add(
+            const Duration(minutes: 4, seconds: 59, milliseconds: 999),
+          ),
         );
         final reading = Reading<int>(
           clock: clock,
