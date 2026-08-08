@@ -1,1 +1,1 @@
-// Displays a single vehicle row in the fleet list.
+export 'package:byte_beam/features/fleet/presentation/widgets/vehicle_card.dart';
